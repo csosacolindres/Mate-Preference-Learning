@@ -49,7 +49,7 @@ startRecieved <- 1
 startSent <- 1
 
 
-cycle <- 10
+prefLearningCycles <- 10
 mateChoiceCycles <- 10000
 ```
 
@@ -228,15 +228,8 @@ Copy and paste to for loop that has (new) ability to change preferences.
 
 # if (first not first generation, Change Preferences: )
 
-for(p in 1:cycle){
-  
-  if(p < 1){
-  
-    
-    
-    }  
-  
-  # Calculate MV
+for(p in 1:prefLearningCycles){
+   # Calculate MV
   mMVs <- t(apply(mPrefVector, 1, function(x) apply(fTraits, 1, function(y) mvcalc(x, y))))
   fMVs <- t(apply(fPrefVector, 1, function(x) apply(mTraits, 1, function (y) mvcalc(x, y))))
   
@@ -272,9 +265,6 @@ for(p in 1:cycle){
   
 
   # Compare Reward #
-  
-  
-
   
 }
 
