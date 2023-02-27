@@ -38,8 +38,6 @@ editor: visual
 
 4.  Cycle back to #2 (change preferences relative to memory by methods---for now only Random) until preferences are no longer changing.
 
-Notes: work with matrices over data.frames, they are more efficient.
-
 Parameters
 
 ```{r}
@@ -71,9 +69,9 @@ females <- data[data$sex == 0,]
 
 
 # MALES: TRAITS ; PREFERENCE VECTOR, MEMEORY ; REWARD VECTOR, MEMORY
-traitsM <- males[, c(345:359)]
-prefVectorM <- matrix(startPref, nrow(males), 15)
-colnames(prefVectorM) <- c("prefVector_affectionate", 
+mTraits <- males[, c(345:359)]
+mPrefVector <- matrix(startPref, nrow(males), 15)
+colnames(mPrefVector) <- c("prefVector_affectionate", 
                             "prefVector_ambition", 
                             "prefVector_artistic", 
                             "prefVector_disposition", 
@@ -88,8 +86,8 @@ colnames(prefVectorM) <- c("prefVector_affectionate",
                             "prefVector_resources", 
                             "prefVector_sexy", 
                             "prefVector_status")
-prefMemoryM <- matrix(NA, nrow(males), 15)
-colnames(prefMemoryM) <- c("prefMemory_affectionate", 
+mPrefMemory <- matrix(NA, nrow(males), 15)
+colnames(mPrefMemory) <- c("prefMemory_affectionate", 
                             "prefMemory_ambition", 
                             "prefMemory_artistic", 
                             "prefMemory_disposition", 
@@ -104,13 +102,13 @@ colnames(prefMemoryM) <- c("prefMemory_affectionate",
                             "prefMemory_resources", 
                             "prefMemory_sexy", 
                             "prefMemory_status")
-rewVectorM <- matrix(NA, nrow(males), nrow(females))
+mRewVector <- matrix(NA, nrow(males), nrow(females))
 #colnames(rewVectorM) <- c("rewVec_female1", 
                           # "rewVec_female2", 
                            #"rewVec_female3", 
                            #"rewVec_female4", 
                            #"rewVec_female5")
-rewMemoryM <- matrix(NA, nrow(males), nrow(females))
+mRewMemory <- matrix(NA, nrow(males), nrow(females))
 #colnames(rewMemoryM) <- c("rewMem_female1", 
                           # "rewMem_female2", 
                            #"rewMem_female3", 
@@ -124,9 +122,9 @@ rewMemoryM <- matrix(NA, nrow(males), nrow(females))
 
 
 # FEMALES: PREFERENCE VECTOR, MEMORY ; REWARD VECTOR, MEMORY
-traitsF <- females[, c(345:359)]
-prefVectorF <- matrix(startPref, nrow(females), 15)
-colnames(prefVectorF) <- c("prefVector_affectionate", 
+fTraits <- females[, c(345:359)]
+fPrefVector <- matrix(startPref, nrow(females), 15)
+colnames(fPrefVector) <- c("prefVector_affectionate", 
                             "prefVector_ambition", 
                             "prefVector_artistic", 
                             "prefVector_disposition", 
@@ -142,8 +140,8 @@ colnames(prefVectorF) <- c("prefVector_affectionate",
                             "prefVector_sexy", 
                             "prefVector_status")
 
-prefMemoryF <- matrix(NA, nrow(females), 15)
-colnames(prefMemoryF) <- c("prefMemory_affectionate", 
+fPrefMemory <- matrix(NA, nrow(females), 15)
+colnames(fPrefMemory) <- c("prefMemory_affectionate", 
                             "prefMemory_ambition", 
                             "prefMemory_artistic", 
                             "prefMemory_disposition", 
@@ -158,13 +156,13 @@ colnames(prefMemoryF) <- c("prefMemory_affectionate",
                             "prefMemory_resources", 
                             "prefMemory_sexy", 
                             "prefMemory_status")
-rewVectorF <- matrix(NA, nrow(females), nrow(males))
+fRewVector <- matrix(NA, nrow(females), nrow(males))
 #colnames(rewVectorF) <- c("rewVec_male1", 
                           # "rewVec_male2", 
                           # "rewVec_male3", 
                           # "rewVec_male4", 
                            #"rewVec_male5")
-rewMemoryF <- matrix(NA, nrow(females), nrow(males))
+fRewMemory <- matrix(NA, nrow(females), nrow(males))
 #colnames(rewMemoryF) <- c("rewMem_male1", 
                           # "rewMem_male2", 
                            #"rewMem_male3", 
@@ -173,8 +171,8 @@ rewMemoryF <- matrix(NA, nrow(females), nrow(males))
 
 
 #AGENTS
-mAgents <- cbind(traitsM, prefVectorM, prefMemoryM)
-fAgents <- cbind(traitsF, prefVectorF, prefMemoryF)
+mAgents <- cbind(mTraits, mPrefVector, mPrefMemory)
+fAgents <- cbind(fTraits, fPrefVector, fPrefMemory)
 # Keep traits, pref vector pref mem. For rew vector, memory and choice keep as part of the environment. 
 
 
@@ -239,8 +237,8 @@ for(p in 1:cycle){
     }  
   
   # Calculate MV
-  maleMVs <- t(apply(prefVectorM, 1, function(x) apply(traitsF, 1, function(y) mvcalc(x, y))))
-  femMVs <- t(apply(prefVectorF, 1, function(x) apply(traitsM, 1, function (y) mvcalc(x, y))))
+  mMVs <- t(apply(mPrefVector, 1, function(x) apply(fTraits, 1, function(y) mvcalc(x, y))))
+  fMVs <- t(apply(fPrefVector, 1, function(x) apply(mTraits, 1, function (y) mvcalc(x, y))))
   
   # Create choice matrix:
   mChoice <- matrix(1, nrow(males), nrow(females))
@@ -249,25 +247,29 @@ for(p in 1:cycle){
   
   for(c in 1:mateChoiceCycles){
     
-    # Calculate Reward (real-time as for loop cycles)
-    mReward <- rcalc(maleMVs, fChoice, mChoice)
-    fReward <- rcalc(femMVs, mChoice, fChoice)
+    # Calculate Reward 
+    mReward <- rcalc(mMVs, fChoice, mChoice)
+    fReward <- rcalc(fMVs, mChoice, fChoice)
     
-    # Choose Mate (real-time as for loop cycles)
-    maxRewardM <- cbind(1:nrow(males), apply(mReward, 1, which.max))
-    maxRewardF <- cbind(1:nrow(females), apply(fReward, 1, which.max))
+    # Choose Mate 
+    mMaxReward <- cbind(1:nrow(males), apply(mReward, 1, which.max))
+    fMaxReward <- cbind(1:nrow(females), apply(fReward, 1, which.max))
     
     
     
     # Update Choice Matrices
-    mChoice[maxRewardM] <- mChoice[maxRewardM] + 1
-    fChoice[maxRewardF] <- fChoice[maxRewardF] + 1
+    mChoice[mMaxReward] <- mChoice[mMaxReward] + 1
+    fChoice[fMaxReward] <- fChoice[fMaxReward] + 1
+    
+    # Store mReward & fReward in Reward Memory
     
     
 
   
   
   }
+  # Commit to Memory 
+  
 
   # Compare Reward #
   
