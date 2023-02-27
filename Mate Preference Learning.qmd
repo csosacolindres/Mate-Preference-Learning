@@ -1,0 +1,533 @@
+---
+title: "How To Learn Your Mate Preferences"
+format: html
+editor: visual
+---
+
+## Mate Preference Learning
+
+**Purpose**: This model was designed to explore how might species-typical mating psychology give rise to individually tailored mate preferences. Using an agent-based model, we will test the ability of a reinforcement learning algorithm to reproduce the ideal mate preferences of N = 1,044 participants.
+
+✅ **Agents**: Each agent represents a participant. The agents are made up of 15 traits, an initial preference vector (10's across all traits), an initial reward vector (date mate value given preferences), memory for reward vector, memory for preference vector.
+
+**Life Cycle:**
+
+1.  Mate choice for n cycles using preference vector.
+
+    1.  Each cycle, they choose a mate that maximizes mv\*received/sent
+
+    2.  Store mv\*received/sent in memory for reward vector (needs to be constantly recalc)
+
+    3.  Preference vector goes into preference memory
+
+2.  Change preferences relative to memory by methods:
+
+    1.  Random
+
+    2.  Decreased fixed amount (need to code diff for this)
+
+    3.  Move towards highest reward partner (and this)
+
+3.  Mate choice for n cycles using changed preference vector
+
+    1.  Compare max reward to max reward stored in memory (do new preferences do better than old preferences?)
+
+        1.  If better: Store new preferences in memory & store reward in memory
+
+        2.  If not better: Keep memory unchanged; discard new preference & reward vector.
+
+4.  Cycle back to #2 (change preferences relative to memory by methods---for now only Random) until preferences are no longer changing.
+
+Notes: work with matrices over data.frames, they are more efficient.
+
+Parameters
+
+```{r}
+#PARAMETERS
+
+startPref <- 10
+
+startRecieved <- 1
+startSent <- 1
+
+
+cycle <- 10
+mateChoiceCycles <- 10000
+```
+
+Agent Generation
+
+```{r}
+
+
+# Human_data; PIN(3); sex(4); Ideal(235:249) Affectionate, Ambition, Artistic, Disposition, Family, Health, Humor, Intelligent, Kind, Parenting, Physical Attractiveness, Religious, Resources, Sexy, Status; Importance(283:297) " ; Self Composite(345:359) " ; Self Mate Value Composite(418) "
+
+data <- read.csv("Human_data.csv")
+# Sampled 10 people to chick if things are working right. 
+data <- data[c(1:5, 950:954),]
+
+males <- data[data$sex == 1,]
+females <- data[data$sex == 0,]
+
+
+# MALES: TRAITS ; PREFERENCE VECTOR, MEMEORY ; REWARD VECTOR, MEMORY
+traitsM <- males[, c(345:359)]
+prefVectorM <- matrix(startPref, nrow(males), 15)
+colnames(prefVectorM) <- c("prefVector_affectionate", 
+                            "prefVector_ambition", 
+                            "prefVector_artistic", 
+                            "prefVector_disposition", 
+                            "prefVector_family", 
+                            "prefVector_health", 
+                            "prefVector_humor", 
+                            "prefVector_intelligent", 
+                            "prefVector_kind", 
+                            "prefVector_parenting", 
+                            "prefVector_physAtt", 
+                            "prefVector_religious", 
+                            "prefVector_resources", 
+                            "prefVector_sexy", 
+                            "prefVector_status")
+prefMemoryM <- matrix(NA, nrow(males), 15)
+colnames(prefMemoryM) <- c("prefMemory_affectionate", 
+                            "prefMemory_ambition", 
+                            "prefMemory_artistic", 
+                            "prefMemory_disposition", 
+                            "prefMemory_family", 
+                            "prefMemory_health", 
+                            "prefMemory_humor", 
+                            "prefMemory_intelligent", 
+                            "prefMemory_kind", 
+                            "prefMemory_parenting", 
+                            "prefMemory_physAtt", 
+                            "prefMemory_religious", 
+                            "prefMemory_resources", 
+                            "prefMemory_sexy", 
+                            "prefMemory_status")
+rewVectorM <- matrix(NA, nrow(males), nrow(females))
+#colnames(rewVectorM) <- c("rewVec_female1", 
+                          # "rewVec_female2", 
+                           #"rewVec_female3", 
+                           #"rewVec_female4", 
+                           #"rewVec_female5")
+rewMemoryM <- matrix(NA, nrow(males), nrow(females))
+#colnames(rewMemoryM) <- c("rewMem_female1", 
+                          # "rewMem_female2", 
+                           #"rewMem_female3", 
+                           #"rewMem_female4", 
+                           #"rewMem_female5")
+
+
+
+
+
+
+
+# FEMALES: PREFERENCE VECTOR, MEMORY ; REWARD VECTOR, MEMORY
+traitsF <- females[, c(345:359)]
+prefVectorF <- matrix(startPref, nrow(females), 15)
+colnames(prefVectorF) <- c("prefVector_affectionate", 
+                            "prefVector_ambition", 
+                            "prefVector_artistic", 
+                            "prefVector_disposition", 
+                            "prefVector_family", 
+                            "prefVector_health", 
+                            "prefVector_humor", 
+                            "prefVector_intelligent", 
+                            "prefVector_kind", 
+                            "prefVector_parenting", 
+                            "prefVector_physAtt", 
+                            "prefVector_religious", 
+                            "prefVector_resources", 
+                            "prefVector_sexy", 
+                            "prefVector_status")
+
+prefMemoryF <- matrix(NA, nrow(females), 15)
+colnames(prefMemoryF) <- c("prefMemory_affectionate", 
+                            "prefMemory_ambition", 
+                            "prefMemory_artistic", 
+                            "prefMemory_disposition", 
+                            "prefMemory_family", 
+                            "prefMemory_health", 
+                            "prefMemory_humor", 
+                            "prefMemory_intelligent", 
+                            "prefMemory_kind", 
+                            "prefMemory_parenting", 
+                            "prefMemory_physAtt", 
+                            "prefMemory_religious", 
+                            "prefMemory_resources", 
+                            "prefMemory_sexy", 
+                            "prefMemory_status")
+rewVectorF <- matrix(NA, nrow(females), nrow(males))
+#colnames(rewVectorF) <- c("rewVec_male1", 
+                          # "rewVec_male2", 
+                          # "rewVec_male3", 
+                          # "rewVec_male4", 
+                           #"rewVec_male5")
+rewMemoryF <- matrix(NA, nrow(females), nrow(males))
+#colnames(rewMemoryF) <- c("rewMem_male1", 
+                          # "rewMem_male2", 
+                           #"rewMem_male3", 
+                           #"rewMem_male4", 
+                           #"rewMem_male5")
+
+
+#AGENTS
+mAgents <- cbind(traitsM, prefVectorM, prefMemoryM)
+fAgents <- cbind(traitsF, prefVectorF, prefMemoryF)
+# Keep traits, pref vector pref mem. For rew vector, memory and choice keep as part of the environment. 
+
+
+```
+
+Functions
+
+```{r}
+
+# Mate Value Calculation : own pref vector, others trait composite
+mvcalc <- function(prefVector, traits){
+  names(prefVector) <- 1:15
+  names(traits) <- 1:15
+  mv <- 10 *(-1 *(dist(rbind(prefVector, traits))) + sqrt(10^2 *15)) / sqrt(10^2 *15)
+  return(mv)
+}
+
+# Reward Calculation : interest recieved, interest sent
+rcalc <- function(mv, recieved, sent) {
+  reward <- mv * recieved / sent
+  return(reward)
+}
+
+```
+
+SIMULATION
+
+Learning Cycles:
+
+-   change preferences
+
+-   calculate MV
+
+-   create choice matrix
+
+-   mate choice cycles
+
+    -   calculate reward
+
+    -   choose mate
+
+    -   update choice matrix
+
+-   compare reward
+
+update as necessary
+
+Take this models reward as is (before update preferences). Save to memory.
+
+Copy and paste to for loop that has (new) ability to change preferences.
+
+```{r}
+
+# if (first not first generation, Change Preferences: )
+
+for(p in 1:cycle){
+  
+  if(p < 1){
+  
+    
+    
+    }  
+  
+  # Calculate MV
+  maleMVs <- t(apply(prefVectorM, 1, function(x) apply(traitsF, 1, function(y) mvcalc(x, y))))
+  femMVs <- t(apply(prefVectorF, 1, function(x) apply(traitsM, 1, function (y) mvcalc(x, y))))
+  
+  # Create choice matrix:
+  mChoice <- matrix(1, nrow(males), nrow(females))
+  fChoice <- matrix(1, nrow(females), nrow(males))
+  
+  
+  for(c in 1:mateChoiceCycles){
+    
+    # Calculate Reward (real-time as for loop cycles)
+    mReward <- rcalc(maleMVs, fChoice, mChoice)
+    fReward <- rcalc(femMVs, mChoice, fChoice)
+    
+    # Choose Mate (real-time as for loop cycles)
+    maxRewardM <- cbind(1:nrow(males), apply(mReward, 1, which.max))
+    maxRewardF <- cbind(1:nrow(females), apply(fReward, 1, which.max))
+    
+    
+    
+    # Update Choice Matrices
+    mChoice[maxRewardM] <- mChoice[maxRewardM] + 1
+    fChoice[maxRewardF] <- fChoice[maxRewardF] + 1
+    
+    
+
+  
+  
+  }
+
+  # Compare Reward #
+  
+  
+
+  
+}
+
+
+
+
+```
+
+TRASH:
+
+```{r}
+# AGENT GENERATION
+
+data <- read.csv("Human_data.csv")
+# Sampled 10 people to chick if things are working right. 
+data <- data[c(1:5, 950:955), c(3:4, 345:359)]
+
+males <- data[data$sex == 1,]
+females <- data[data$sex == 0,]
+
+
+# putting agents together; PIN(3); sex(4); Ideal(235:249) Affectionate, Ambition, Artistic, Disposition, Family, Health, Humor, Intelligent, Kind, Parenting, Physical Attractiveness, Religious, Resources, Sexy, Status; Importance(283:297) " ; Self Composite(345:359) " ; Self Mate Value Composite(418) "
+
+traits <- data[c(3:4, 345:359)]
+
+pref_memory <- data.frame("pref_affectionate_memory" = rep(NA, times = nrow(data)), 
+                          "pref_ambition_memory" = NA, 
+                          "pref_artistic_memory" = NA, 
+                          "pref_disposition_memory" = NA, 
+                          "pref_family_memory" = NA, 
+                          "pref_health_memory" = NA, 
+                          "pref_humor_memory" = NA, 
+                          "pref_intelligent_memory" = NA, 
+                          "pref_kind_memory" = NA, 
+                          "pref_parenting_memory" = NA, 
+                          "pref_physAtt_memory" = NA, 
+                          "pref_religious_memory" = NA, 
+                          "pref_resources_memory" = NA, 
+                          "pref_sexy_memory" = NA, 
+                          "pref_status_memory" = NA)
+
+pref_vector <- data.frame("pref_affectionate_vector" = rep(pref_value_i, times = nrow(data)), 
+                          "pref_ambition_vector" = pref_value_i, 
+                          "pref_artistic_vector" = pref_value_i, 
+                          "pref_disposition_vector" = pref_value_i, 
+                          "pref_family_vector" = pref_value_i, 
+                          "pref_health_vector" = pref_value_i, 
+                          "pref_humor_vector" = pref_value_i, 
+                          "pref_intelligent_vector" = pref_value_i, 
+                          "pref_kind_vector" = pref_value_i, 
+                          "pref_parenting_vector" = pref_value_i, 
+                          "pref_physAtt_vector" = pref_value_i, 
+                          "pref_religious_vector" = pref_value_i, 
+                          "pref_resources_vector" = pref_value_i, 
+                          "pref_sexy_vector" = pref_value_i, 
+                          "pref_status_vector" = pref_value_i)
+
+# an alt to ^ pref_vector <- matrix(startVal, nrow(males), 15)
+# colnames(pref_vector) <- c(...)
+
+PrefVector_m <- matrix(startPref, nrow(males), 15)
+colnames(PrefVector_m) <- c("prefVector_affectionate", 
+                            "prefVector_ambition", 
+                            "prefVector_artistic", 
+                            "prefVector_disposition", 
+                            "prefVector_family", 
+                            "prefVector_health", 
+                            "prefVector_humor", 
+                            "prefVector_intelligent", 
+                            "prefVector_kind", 
+                            "prefVector_parenting", 
+                            "prefVector_physAtt", 
+                            "prefVector_religious", 
+                            "prefVector_resources", 
+                            "prefVector_sexy", 
+                            "prefVector_status")
+prefMemory_m <- matrix(startPref, nrow(females), 15)
+colnames(prefMemory_m) <- c("prefMemory_affectionate", 
+                            "prefMemory_ambition", 
+                            "prefMemory_artistic", 
+                            "prefMemory_disposition", 
+                            "prefMemory_family", 
+                            "prefMemory_health", 
+                            "prefMemory_humor", 
+                            "prefMemory_intelligent", 
+                            "prefMemory_kind", 
+                            "prefMemory_parenting", 
+                            "prefMemory_physAtt", 
+                            "prefMemory_religious", 
+                            "prefMemory_resources", 
+                            "prefMemory_sexy", 
+                            "prefMemory_status")
+
+PrefVector_f <- matrix(startPref, nrow(males), 15)
+colnames(PrefVector_f) <- c("prefVector_affectionate", 
+                            "prefVector_ambition", 
+                            "prefVector_artistic", 
+                            "prefVector_disposition", 
+                            "prefVector_family", 
+                            "prefVector_health", 
+                            "prefVector_humor", 
+                            "prefVector_intelligent", 
+                            "prefVector_kind", 
+                            "prefVector_parenting", 
+                            "prefVector_physAtt", 
+                            "prefVector_religious", 
+                            "prefVector_resources", 
+                            "prefVector_sexy", 
+                            "prefVector_status")
+
+prefMemory_f <- matrix(startPref, nrow(females), 15)
+colnames(prefMemory_f) <- c("prefMemory_affectionate", 
+                            "prefMemory_ambition", 
+                            "prefMemory_artistic", 
+                            "prefMemory_disposition", 
+                            "prefMemory_family", 
+                            "prefMemory_health", 
+                            "prefMemory_humor", 
+                            "prefMemory_intelligent", 
+                            "prefMemory_kind", 
+                            "prefMemory_parenting", 
+                            "prefMemory_physAtt", 
+                            "prefMemory_religious", 
+                            "prefMemory_resources", 
+                            "prefMemory_sexy", 
+                            "prefMemory_status")
+
+# should be maxtix agent[female] x agent[male] for both vec and mem. 
+reward_vector <- data.frame("new_reward" = rep(NA, times = nrow(data)))
+
+reward_memory<- data.frame("stored_reward" = rep(NA, times = nrow(data)))
+
+# Putting agents together
+agents <- cbind(traits, 
+            pref_memory, 
+            pref_vector, 
+            reward_vector, 
+            reward_memory)
+
+
+
+```
+
+Reward
+
+```{r}
+# take 3 ; #make camels 
+
+maleMvs <- apply(pref_vector, 1, function (x) apply(traits, 1, function(y) mvcalc(x,y))) #maybe will need to t(), check. 
+femaleMvs <- apply(pref_vector, 1, function (x) apply(traits, 1, ))
+
+
+
+```
+
+~~interest is dependent on... i would need recieved & sent vector.. would i? So, for every agent seen, you could calc mv. lets say MV of focal agent \| date agent = 7. at the same time, date agent rates you 8 (remember, mv is based on pref_vector and others traits--a problem: how do you objectivly say what a persons traits are? lets ignore for now...). What if focal and date signal of interest is a probabilitsic thing that instead of it being a threshold, it is a datemv / total possible mv? lets say then focal agent given date agent interest is .7. run this through a normal distribution and probabity that interest is YES is .7? WELL, rn since my initial preferences are all 10, should my interest be high recieved and high sent?~~
+
+\~\~So, instead of doing MV calcs of everyone, cut calc by half with male only considering female and female to male.
+
+you'd need to go through every agent and calculate mv's... how do you get an integer for recieved and sent? sent: if focal agent "likes" other agent then send interest. What does "like" mean?\~\~
+
+```{r}
+# REWARD
+# Choose a mate that maximizes Reward = mv * recieved / sent
+
+date_traits <- females[1:10, 3:17]#figure out how to only match opposite sex. 
+focal_prefs <- males[1:10, 34:48]
+colnames(date_traits) <- colnames(focal_prefs)
+mvdate <- mvcalc(focal_prefs, date_traits)
+
+
+#need forloop
+sent <- sample(c(0,1), length(mvdate), replace = T, prob = mvdate[1:length(mvdate)]/10)
+
+sent_interest <- data.frame('sent' = rep(NA, length(mvdate)))
+for (s in 1:length(mvdate)){
+  
+  interest <- sample(c(0,1), 1, replace = T, prob = mvdate[s]/10)
+  sent_interest[s] <- interest
+  
+}
+
+
+
+
+
+
+
+
+#focal agent shows interest
+
+#potential_targets <- data.frame("sent_interest" = rep(NA, times = nrow(agents)), "recieved_interest" = NA)
+sent <- 
+recieved <- #date agent shows interest
+
+```
+
+```{r}
+
+
+
+
+
+
+# need to know mv's some how--give agents sight: they can see mv's 
+
+
+mvs <- self_trait_comp
+colnames(mvs) <- colnames(pref_vector)
+
+m_datemvs <- data.frame("f_mate_values" = rep(NA, times = nrow(agents)))
+f_datemvs <- data.frame("mate_values" = rep(NA, times = nrow(data)))
+
+
+#wtf... I need to do this so focal agent sees all date mvs for a cycle. After they mvcalc everyone, focal will continue the cycle until the cycle completes and he has a new prefernce vector where he will then recalculate datemvs for the next cycle. 
+ apply(datemvs, 1, function(x) mvcalc(pref_vector[x,], mvs[x + 1, ]))
+# AMKE IT ONLY OPPOSITE SEX ! THIS WILL SPLIT COMPUTATION IN HALF
+# LIMIT MEMORY: MAYBE YOU CAN ONLY REMEMBER n PEOPLE'S MVS--MAYBE ITS ONLY FUNCTIONAL TO DO SO.
+# funnel opposite sex. 
+
+
+
+# Calculate opposite sex MVs.
+ftraits <- traits
+colnames(ftraits) <- colnames(pref_vector)
+
+m_datemvs <- data.frame("f_mate_values" = rep(NA, times = nrow(males)))
+femalemvs_m <- apply(m_datemvs, 1, function(x) mvcalc(pref_vector[x, ], traits[x+1, 4]))
+
+
+f_datemvs <- data.frame("m_mate_values" = rep(NA, times = nrow(females)))
+
+
+
+# if interest == yes, count + 1; if interest == no, count + 0; if datemv maximized my reward, interest, yes, else no. 
+
+
+interest <- ifelse(argmax(datemv), T, F)
+received <- #sum of T's for interest
+
+  
+reward = mv * received / sent
+
+
+```
+
+Life Cycle:
+
+Choose mate based on you preference vector.
+
+```{r}
+
+# Choose a mate
+
+
+
+
+```
