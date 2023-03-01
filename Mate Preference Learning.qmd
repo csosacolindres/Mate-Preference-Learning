@@ -52,6 +52,7 @@ startSent <- 1
 
 prefLearningCycles <- 10
 mateChoiceCycles <- 10000
+
 ```
 
 Agent Generation
