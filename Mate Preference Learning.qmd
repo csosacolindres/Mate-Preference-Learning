@@ -44,6 +44,7 @@ Parameters
 #PARAMETERS
 
 startPref <- 10
+startRMem <- 0
 
 startRecieved <- 1
 startSent <- 1
@@ -108,7 +109,7 @@ mRewVector <- matrix(NA, nrow(males), nrow(females))
                            #"rewVec_female3", 
                            #"rewVec_female4", 
                            #"rewVec_female5")
-mRewMemory <- matrix(NA, nrow(males), nrow(females))
+mRewMemory <- matrix(startRMem, nrow(males), nrow(females))
 #colnames(rewMemoryM) <- c("rewMem_female1", 
                           # "rewMem_female2", 
                            #"rewMem_female3", 
@@ -162,7 +163,7 @@ fRewVector <- matrix(NA, nrow(females), nrow(males))
                           # "rewVec_male3", 
                           # "rewVec_male4", 
                            #"rewVec_male5")
-fRewMemory <- matrix(NA, nrow(females), nrow(males))
+fRewMemory <- matrix(startRMem, nrow(females), nrow(males))
 #colnames(rewMemoryF) <- c("rewMem_male1", 
                           # "rewMem_male2", 
                            #"rewMem_male3", 
@@ -224,12 +225,41 @@ Take this models reward as is (before update preferences). Save to memory.
 
 Copy and paste to for loop that has (new) ability to change preferences.
 
+Methods
+
+```{r}
+
+# Random Method: Change row values for every col to a random number. 
+randomMethod <- function(mPrefVector, fPrefVector){
+  
+  mRandom <- t(apply(mPrefVector, 1, function(y) runif(y, min = 0, max = 10)))
+  colnames(mRandom) <- colnames(mPrefVector)
+  mPrefVector <- mRandom
+  
+  fRandom <- t(apply(fPrefVector, 1, function(x) runif(x, min = 0, max = 10)))
+  colnames(fRandom) <- colnames(fPrefVector)
+  fPrefVector <- fRandom
+  
+  return(list(mPrefVector, fPrefVector))
+}
+  
+
+
+```
+
 ```{r}
 
 # if (first not first generation, Change Preferences: )
 
+
+
+
 for(p in 1:prefLearningCycles){
-   # Calculate MV
+  if(p > 1) {
+   randomMethod(mPrefVector, fPrefVector) 
+  }
+  
+  # Calculate MV
   mMVs <- t(apply(mPrefVector, 1, function(x) apply(fTraits, 1, function(y) mvcalc(x, y))))
   fMVs <- t(apply(fPrefVector, 1, function(x) apply(mTraits, 1, function (y) mvcalc(x, y))))
   
@@ -254,21 +284,48 @@ for(p in 1:prefLearningCycles){
     mChoice[mMaxReward] <- mChoice[mMaxReward] + 1
     fChoice[fMaxReward] <- fChoice[fMaxReward] + 1
     
-    # Store mReward & fReward in Reward Memory
     
-    
-
-  
   
   }
   # Commit to Memory 
   
 
-  # Compare Reward #
+  # Store mReward & fReward in Reward Memory (of MaxReward mates?) and compare vector to memory
+
+    mRewVector <- matrix(mReward, 
+                         nrow(mRewVector), 
+                         ncol(mRewVector), 
+                         dimnames = colnames(mRewVector))
+    
+    fRewVector <- matrix(fReward, 
+                         nrow(fRewVector), 
+                         ncol(fRewVector), 
+                         dimnames = colnames(fRewVector))
+
+
+    
   
+ if(mRewMemory < mRewVector){
+    
+    # for every "False" do this: 
+    
+  
+    
+    mRewMemory[mMaxReward] <- mRewVector[mMaxReward]
+
+    fRewMemory[fMaxReward] <- fRewVector[fMaxReward]
+    
+ }
+    
 }
+  
 
 
 
 
+
+```
+
+```{r}
+# How Should Success be Calculated? It makes sense to calculate it as an "interest" ratio. (The interest you recieve from females: how many females chose me?) / (the interest you send to females: how many females I have pursued) seems like a mathimatical model that gets at the goodness of mate preference values. I am not sure that this is what is going on right now. Look into this. 
 ```
