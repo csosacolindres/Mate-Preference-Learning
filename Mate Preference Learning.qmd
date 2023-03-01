@@ -72,8 +72,8 @@ females <- data[data$sex == 0,]
 
 # MALES: TRAITS ; PREFERENCE VECTOR, MEMEORY ; REWARD VECTOR, MEMORY
 mTraits <- males[, c(345:359)]
-mPrefVector <- matrix(startPref, nrow(males), 15)
-colnames(mPrefVector) <- c("prefVector_affectionate", 
+mPref <- matrix(startPref, nrow(males), 15)
+colnames(mPref) <- c("prefVector_affectionate", 
                             "prefVector_ambition", 
                             "prefVector_artistic", 
                             "prefVector_disposition", 
@@ -104,7 +104,7 @@ colnames(mPrefMemory) <- c("prefMemory_affectionate",
                             "prefMemory_resources", 
                             "prefMemory_sexy", 
                             "prefMemory_status")
-mRewVector <- matrix(NA, nrow(males), nrow(females))
+#mRewVector <- matrix(NA, nrow(males), nrow(females))
 #colnames(rewVectorM) <- c("rewVec_female1", 
                           # "rewVec_female2", 
                            #"rewVec_female3", 
@@ -125,8 +125,8 @@ mRewMemory <- matrix(startRMem, nrow(males), nrow(females))
 
 # FEMALES: PREFERENCE VECTOR, MEMORY ; REWARD VECTOR, MEMORY
 fTraits <- females[, c(345:359)]
-fPrefVector <- matrix(startPref, nrow(females), 15)
-colnames(fPrefVector) <- c("prefVector_affectionate", 
+fPref <- matrix(startPref, nrow(females), 15)
+colnames(fPref) <- c("prefVector_affectionate", 
                             "prefVector_ambition", 
                             "prefVector_artistic", 
                             "prefVector_disposition", 
@@ -173,8 +173,8 @@ fRewMemory <- matrix(startRMem, nrow(females), nrow(males))
 
 
 #AGENTS
-mAgents <- cbind(mTraits, mPrefVector, mPrefMemory)
-fAgents <- cbind(fTraits, fPrefVector, fPrefMemory)
+mAgents <- cbind(mTraits, mPref, mPrefMemory)
+fAgents <- cbind(fTraits, fPref, fPrefMemory)
 # Keep traits, pref vector pref mem. For rew vector, memory and choice keep as part of the environment. 
 
 
@@ -230,18 +230,20 @@ Methods
 
 ```{r}
 
+# make randomMethod only take one preferncec vector. 
+
 # Random Method: Change row values for every col to a random number. 
-randomMethod <- function(mPrefVector, fPrefVector){
+randomMethod <- function(mPref, fPref){
   
-  mRandom <- t(apply(mPrefVector, 1, function(y) runif(y, min = 0, max = 10)))
-  colnames(mRandom) <- colnames(mPrefVector)
-  mPrefVector <- mRandom
+  mRandom <- t(apply(mPref, 1, function(y) runif(y, min = 0, max = 10)))
+  colnames(mRandom) <- colnames(mPref)
+  mPref <- mRandom
   
-  fRandom <- t(apply(fPrefVector, 1, function(x) runif(x, min = 0, max = 10)))
-  colnames(fRandom) <- colnames(fPrefVector)
-  fPrefVector <- fRandom
+  fRandom <- t(apply(fPref, 1, function(x) runif(x, min = 0, max = 10)))
+  colnames(fRandom) <- colnames(fPref)
+  fPref <- fRandom
   
-  return(list(mPrefVector, fPrefVector))
+  return(list(mPref, fPref))
 }
   
 
@@ -256,13 +258,16 @@ randomMethod <- function(mPrefVector, fPrefVector){
 
 
 for(p in 1:prefLearningCycles){
+  
+  # make 2 randomMethods calc ( for male AND females)
+  # Overide preferences save as updates come. 
   if(p > 1) {
-   randomMethod(mPrefVector, fPrefVector) 
+   randomMethod(mPref, fPref) 
   }
   
   # Calculate MV
-  mMVs <- t(apply(mPrefVector, 1, function(x) apply(fTraits, 1, function(y) mvcalc(x, y))))
-  fMVs <- t(apply(fPrefVector, 1, function(x) apply(mTraits, 1, function (y) mvcalc(x, y))))
+  mMVs <- t(apply(mPref, 1, function(x) apply(fTraits, 1, function(y) mvcalc(x, y))))
+  fMVs <- t(apply(fPref, 1, function(x) apply(mTraits, 1, function (y) mvcalc(x, y))))
   
   # Create choice matrix:
   mChoice <- matrix(1, nrow(males), nrow(females))
@@ -293,6 +298,7 @@ for(p in 1:prefLearningCycles){
 
   # Store mReward & fReward in Reward Memory (of MaxReward mates?) and compare vector to memory
 
+  # dont need these , m and freward IS rewVector. 
     mRewVector <- matrix(mReward, 
                          nrow(mRewVector), 
                          ncol(mRewVector), 
@@ -305,27 +311,33 @@ for(p in 1:prefLearningCycles){
 
 
     
-  
- if(mRewMemory < mRewVector){
+  # for males. Do same for females. 
+    for(m in 1:nrow(males)){
+      
+      maxNow <- max(mReward[m, ])
+      maxMemory <- max(mRewMemory[m, ])
+      
+      if(maxNow > maxMemory){
+        
+        mRewMemory[m, ] <- mReward[m, ]
+        mPrefMemory[m, ] <- mPref[m, ]
+        
+      }
+      
+      
+    }
     
-    # for every "False" do this: 
-    
-  
-    
-    mRewMemory[mMaxReward] <- mRewVector[mMaxReward]
-
-    fRewMemory[fMaxReward] <- fRewVector[fMaxReward]
-    
- }
     
 }
   
 
 
 
-
+# Correlation between learned prefernces and real prefernces. 
 
 ```
+
+First sentence ; organisms have preferences that guide them to mate.
 
 ```{r}
 # How Should Success be Calculated? It makes sense to calculate it as an "interest" ratio. (The interest you recieve from females: how many females chose me?) / (the interest you send to females: how many females I have pursued) seems like a mathimatical model that gets at the goodness of mate preference values. I am not sure that this is what is going on right now. Look into this. 
