@@ -167,10 +167,10 @@ Functions
 ```{r}
 
 # Mate Value Calculation : own pref vector, others trait composite
-mvcalc <- function(prefVector, traits){
-  names(prefVector) <- 1:15
+mvcalc <- function(pref, traits){
+  names(pref) <- 1:15
   names(traits) <- 1:15
-  mv <- 10 *(-1 *(dist(rbind(prefVector, traits))) + sqrt(10^2 *15)) / sqrt(10^2 *15)
+  mv <- 10 *(-1 *(dist(rbind(pref, traits))) + sqrt(10^2 *15)) / sqrt(10^2 *15)
   return(mv)
 }
 
@@ -208,13 +208,14 @@ Take this models reward as is (before update preferences). Save to memory.
 
 Copy and paste to for loop that has (new) ability to change preferences.
 
-Methods
+Random Update Methods
 
 ```{r}
 
 # make randomMethod only take one prefernce at a time... on second thought, this could be controlled by parameter; randomly change n preferences at a time. 
 
 # Random Method: Change row values for every col to a random number. Don't change highest reward one. 
+# Base Random Method
 randomMethod <- function(pref){
   
   random <- t(apply(pref, 1, function(y) runif(y, min = 0, max = 10)))
@@ -225,16 +226,17 @@ randomMethod <- function(pref){
   return(pref)
 }
   
+# How do I make this so it changes prefernces n at a time? And how do I make it so they change least if most important, and most if least important? 
+
 
 
 ```
 
+Check if this is just anchoring to mvs and randomly changing prefs to = mvs
+
 ```{r}
 
 # if (first not first generation, Change Preferences: )
-
-
-
 
 for(p in 1:prefLearningCycles){
   
@@ -296,15 +298,47 @@ for(p in 1:prefLearningCycles){
       }
     }
 }
-    
-    
-
-  
-
 
 
 # Correlation between learned prefernces and real prefernces. 
 
+
+# Need to standardize outcome and predictor varibles 
+# multivariet model withere i have 15 oucome variables . Later on . 
+
+
 ```
 
 First sentence ; organisms have preferences that guide them towards mates.
+
+```{r}
+# Library
+library(rstanarm)
+library(tidyr)
+```
+
+```{r}
+
+##### ANALYSIS #####
+
+
+# Transform Data #
+
+mPrefMemory <- rowid_to_column(as.data.frame(mPrefMemory), "id")
+mPrefMemory <- mPrefMemory |> pivot_longer(-id, names_to = "trait", names_prefix = "prefMemory_", values_to = "predicted_value")
+
+
+observed <- males[, 235:249] |> as.data.frame() |> rowid_to_column("id")
+observed <- observed |> pivot_longer(-id, names_to = "trait", names_prefix = "ideal_", values_to = "observed_value")
+
+
+d <- left_join(mPrefMemory, observed, by = c("id", "trait"))
+d_z <- d |> group_by(trait) |> mutate(predicted_value = (predicted_value - mean(observed_value))/observed_value, observed_value = (observed_value - mean(observed_value))/observed_value) %>% ungroup()
+
+
+# Multilevel Model #
+
+fit <- stan_glmer(predicted_value ~ observed_value + (1|id), data = d_z)
+fitSummary <- summary(fit)
+
+```
