@@ -48,12 +48,12 @@ startPref <- 10
 startRMem <- 0
 
 # Interest Ratio (starting values)
-startRecieved <- 1
-startSent <- 1
+recieved <- 1
+sent <- 1
 
 # Cycles 
 prefLearningCycles <- 10000
-mateChoiceCycles <- 50
+mateChoiceCycles <- 30
 
 ```
 
@@ -65,11 +65,14 @@ Agent Generation
 # Human_data; PIN(3); sex(4); Ideal(235:249) Affectionate, Ambition, Artistic, Disposition, Family, Health, Humor, Intelligent, Kind, Parenting, Physical Attractiveness, Religious, Resources, Sexy, Status; Importance(283:297) " ; Self Composite(345:359) " ; Self Mate Value Composite(418) "
 
 data <- read.csv("Human_data.csv")
+data <- data[complete.cases(data[, c(235:249)]),]
 # Sampled 10 people to check if things are working right. 
-data <- data[c(1:5, 950:954),]
 
 males <- data[data$sex == 1,]
 females <- data[data$sex == 0,]
+
+males <- males[sample(1:nrow(males), 5),]
+females <- females[sample(1:nrow(females), 5),]
 
 
 # MALES: TRAITS ; PREFERENCE VECTOR, MEMEORY ; REWARD VECTOR, MEMORY
@@ -176,7 +179,7 @@ mvcalc <- function(pref, traits){
 
 # Reward Calculation : interest recieved, interest sent
 rcalc <- function(mv, recieved, sent) {
-  reward <- mv * recieved / sent
+  reward <- mv * (recieved / sent)
   return(reward)
 }
 
@@ -320,7 +323,7 @@ library(tidyr)
 ```{r}
 
 ##### ANALYSIS #####
-
+# Rewrite # Apply function to standardize actual and model prefs, melt into 
 
 # Transform Data #
 
@@ -338,7 +341,14 @@ d_z <- d |> group_by(trait) |> mutate(predicted_value = (predicted_value - mean(
 
 # Multilevel Model #
 
-fit <- stan_glmer(predicted_value ~ observed_value + (1|id), data = d_z)
+fit <- stan_glmer(predicted_value ~ observed_value + (1|id), data = d)
 fitSummary <- summary(fit)
+
+fitZ <- stan_glmer(predicted_value ~ observed_value + (1|id), data = d_z)
+fitSummaryZ <- summary(fitZ)
+
+
+plotFit <- ggplot(d_z, aes(y=predicted_value, x=observed_value)) + geom_point() + geom_smooth(method = "lm")
+
 
 ```
