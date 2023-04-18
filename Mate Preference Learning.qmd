@@ -38,153 +38,6 @@ editor: visual
 
 4.  Cycle back to #2 (change preferences relative to memory by methods---for now only Random) until preferences are no longer changing.
 
-Parameters
-
-```{r}
-#PARAMETERS
-
-# Starting Values for Prefernces, Reward Memory. 
-startPref <- 10
-startRMem <- 0
-
-# Interest Ratio (starting values)
-recieved <- 1
-sent <- 1
-
-# Cycles 
-prefLearningCycles <- 10000
-mateChoiceCycles <- 30
-
-```
-
-Agent Generation
-
-```{r}
-
-
-# Human_data; PIN(3); sex(4); Ideal(235:249) Affectionate, Ambition, Artistic, Disposition, Family, Health, Humor, Intelligent, Kind, Parenting, Physical Attractiveness, Religious, Resources, Sexy, Status; Importance(283:297) " ; Self Composite(345:359) " ; Self Mate Value Composite(418) "
-
-data <- read.csv("Human_data.csv")
-data <- data[complete.cases(data[, c(235:249)]),]
-# Sampled 10 people to check if things are working right. 
-
-males <- data[data$sex == 1,]
-females <- data[data$sex == 0,]
-
-males <- males[sample(1:nrow(males), 5),]
-females <- females[sample(1:nrow(females), 5),]
-
-
-# MALES: TRAITS ; PREFERENCE VECTOR, MEMEORY ; REWARD VECTOR, MEMORY
-mTraits <- males[, c(345:359)]
-mPref <- matrix(startPref, nrow(males), 15)
-colnames(mPref) <- c("prefVector_affectionate", 
-                            "prefVector_ambition", 
-                            "prefVector_artistic", 
-                            "prefVector_disposition", 
-                            "prefVector_family", 
-                            "prefVector_health", 
-                            "prefVector_humor", 
-                            "prefVector_intelligent", 
-                            "prefVector_kind", 
-                            "prefVector_parenting", 
-                            "prefVector_physAtt", 
-                            "prefVector_religious", 
-                            "prefVector_resources", 
-                            "prefVector_sexy", 
-                            "prefVector_status")
-mPrefMemory <- matrix(NA, nrow(males), 15)
-colnames(mPrefMemory) <- c("prefMemory_affectionate", 
-                            "prefMemory_ambition", 
-                            "prefMemory_artistic", 
-                            "prefMemory_disposition", 
-                            "prefMemory_family", 
-                            "prefMemory_health", 
-                            "prefMemory_humor", 
-                            "prefMemory_intelligent", 
-                            "prefMemory_kind", 
-                            "prefMemory_parenting", 
-                            "prefMemory_physAtt", 
-                            "prefMemory_religious", 
-                            "prefMemory_resources", 
-                            "prefMemory_sexy", 
-                            "prefMemory_status")
-
-mRewMemory <- matrix(startRMem, nrow(males), nrow(females))
-
-
-
-
-
-
-# FEMALES: PREFERENCE VECTOR, MEMORY ; REWARD VECTOR, MEMORY
-fTraits <- females[, c(345:359)]
-fPref <- matrix(startPref, nrow(females), 15)
-colnames(fPref) <- c("prefVector_affectionate", 
-                            "prefVector_ambition", 
-                            "prefVector_artistic", 
-                            "prefVector_disposition", 
-                            "prefVector_family", 
-                            "prefVector_health", 
-                            "prefVector_humor", 
-                            "prefVector_intelligent", 
-                            "prefVector_kind", 
-                            "prefVector_parenting", 
-                            "prefVector_physAtt", 
-                            "prefVector_religious", 
-                            "prefVector_resources", 
-                            "prefVector_sexy", 
-                            "prefVector_status")
-
-fPrefMemory <- matrix(NA, nrow(females), 15)
-colnames(fPrefMemory) <- c("prefMemory_affectionate", 
-                            "prefMemory_ambition", 
-                            "prefMemory_artistic", 
-                            "prefMemory_disposition", 
-                            "prefMemory_family", 
-                            "prefMemory_health", 
-                            "prefMemory_humor", 
-                            "prefMemory_intelligent", 
-                            "prefMemory_kind", 
-                            "prefMemory_parenting", 
-                            "prefMemory_physAtt", 
-                            "prefMemory_religious", 
-                            "prefMemory_resources", 
-                            "prefMemory_sexy", 
-                            "prefMemory_status")
-
-fRewMemory <- matrix(startRMem, nrow(females), nrow(males))
-
-
-# Putting the AGENTS together. Make traits, preferences, and preference memory as a part of the agent. The ENVIORNMENT is the rewards, reward memory, and the choices.
-mAgents <- cbind(mTraits, mPref, mPrefMemory)
-fAgents <- cbind(fTraits, fPref, fPrefMemory)
-
-
-
-
-```
-
-Functions
-
-```{r}
-
-# Mate Value Calculation : own pref vector, others trait composite
-mvcalc <- function(pref, traits){
-  names(pref) <- 1:15
-  names(traits) <- 1:15
-  mv <- 10 *(-1 *(dist(rbind(pref, traits))) + sqrt(10^2 *15)) / sqrt(10^2 *15)
-  return(mv)
-}
-
-# Reward Calculation : interest recieved, interest sent
-rcalc <- function(mv, recieved, sent) {
-  reward <- mv * (recieved / sent)
-  return(reward)
-}
-
-```
-
 SIMULATION
 
 Learning Cycles:
@@ -213,18 +66,215 @@ Copy and paste to for loop that has (new) ability to change preferences.
 
 Random Update Methods
 
+Check if this is just anchoring to mvs and randomly changing prefs to = mvs
+
+Methods Cycle : randomMethod, absoluteMethod, etc.
+
+Week 4 Have functional draft for a few methods
+
+```{r}
+#PARAMETERS
+
+# the 15 Traits
+traitNames <- paste0(c("affectionate", 
+                "ambition", 
+                "artistic", 
+                "disposition", 
+                "family", 
+                "health", 
+                "humor", 
+                "intelligent", 
+                "kind", 
+                "parenting", 
+                "physatt", 
+                "religious", 
+                "resources", 
+                "sexy", 
+                "status"))
+
+# Starting Values for Prefernces, Reward Memory. 
+startPref <- 10
+startRMem <- 0
+
+# Interest Ratio (starting values)
+recieved <- 1
+sent <- 1
+
+# number of males and females
+maleNum <- 100
+femaleNum <-100
+
+# Methods
+
+methodList <- c("randomMethod", "absoluteMethod")
+
+
+# absoluteMethod 
+abValue <- .1
+
+
+# Cycles 
+methodCycles <- length(methodList)
+prefLearningCycles <- 10000
+prefTestingCycles <- 1000
+
+
+
+```
+
+Agent Generation
+
 ```{r}
 
+
+# Human_data; PIN(3); sex(4); Ideal(235:249) Affectionate, Ambition, Artistic, Disposition, Family, Health, Humor, Intelligent, Kind, Parenting, Physical Attractiveness, Religious, Resources, Sexy, Status; Importance(283:297) " ; Self Composite(345:359) " ; Self Mate Value Composite(418) "
+
+data <- read.csv("Human_data.csv")
+
+
+data <- data[complete.cases(data[, c(235:249)]),]
+# Sampled 10 people to check if things are working right. 
+
+females <- data[data$sex == 0,]
+males <- data[data$sex == 1,]
+
+
+females <- females[sample(1:nrow(females), femaleNum),]
+males <- males[sample(1:nrow(males), maleNum),]
+
+
+
+# MALES: TRAITS ; PREFERENCE VECTOR, MEMEORY ; REWARD VECTOR, MEMORY
+mTraits <- males[, c(345:359)]
+mPref <- matrix(startPref, nrow(males), 15)
+colnames(mPref) <- c("affectionate", 
+                     "ambition", 
+                     "artistic", 
+                     "disposition", 
+                     "family", 
+                     "health", 
+                     "humor", 
+                     "intelligent", 
+                     "kind", 
+                     "parenting", 
+                     "physatt", 
+                     "religious", 
+                     "resources", 
+                     "sexy", 
+                     "status")
+mPrefMemory <- matrix(startPref, nrow(males), 15)
+colnames(mPrefMemory) <- c("affectionate", 
+                           "ambition", 
+                           "artistic", 
+                           "disposition", 
+                           "family", 
+                           "health", 
+                           "humor", 
+                           "intelligent", 
+                           "kind", 
+                           "parenting", 
+                           "physatt", 
+                           "religious", 
+                           "resources", 
+                           "sexy", 
+                           "status")
+
+mRewMemory <- matrix(startRMem, nrow(males), nrow(females))
+
+
+
+
+
+
+# FEMALES: PREFERENCE VECTOR, MEMORY ; REWARD VECTOR, MEMORY
+fTraits <- females[, c(345:359)]
+fPref <- matrix(startPref, nrow(females), 15)
+colnames(fPref) <- c("affectionate", 
+                     "ambition", 
+                     "artistic", 
+                     "disposition", 
+                     "family", 
+                     "health", 
+                     "humor", 
+                     "intelligent", 
+                     "kind", 
+                     "parenting", 
+                     "physatt", 
+                     "religious", 
+                     "resources", 
+                     "sexy", 
+                     "status")
+
+fPrefMemory <- matrix(startPref, nrow(females), 15)
+colnames(fPrefMemory) <-c("affectionate", 
+                          "ambition", 
+                          "artistic", 
+                          "disposition", 
+                          "family", 
+                          "health", 
+                          "humor", 
+                          "intelligent", 
+                          "kind", 
+                          "parenting", 
+                          "physatt", 
+                          "religious", 
+                          "resources", 
+                          "sexy", 
+                          "status")
+
+fRewMemory <- matrix(startRMem, nrow(females), nrow(males))
+
+
+# Putting the AGENTS together. Make traits, preferences, and preference memory as a part of the agent. The ENVIORNMENT is the rewards, reward memory, and the choices.
+fAgents <- cbind(fTraits, fPref, fPrefMemory)
+mAgents <- cbind(mTraits, mPref, mPrefMemory)
+
+
+
+
+
+```
+
+Functions
+
+```{r}
+
+# Mate Value Calculation : own pref vector, others trait composite
+mvcalc <- function(pref, traits){
+  names(pref) <- 1:15
+  names(traits) <- 1:15
+  mv <- 10 *(-1 *(dist(rbind(pref, traits))) + sqrt(10^2 *15)) / sqrt(10^2 *15)
+  return(mv)
+}
+
+# Reward Calculation : interest recieved, interest sent
+rcalc <- function(mv, recieved, sent) {
+  
+  interestRatio <- t(recieved) / sent
+  
+  # make interest ratio max = 1 , if recived / sent > 1 , set it to 1. # anti-stalker exploit 
+  
+  interestRatio[interestRatio > 1] <- 1
+  
+  reward <- mv * interestRatio 
+  
+  return(reward)
+}
+
+```
+
+```{r}
 # make randomMethod only take one prefernce at a time... on second thought, this could be controlled by parameter; randomly change n preferences at a time. 
 
 # Random Method: Change row values for every col to a random number. Don't change highest reward one. 
 # Base Random Method
 randomMethod <- function(pref){
   
-  random <- t(apply(pref, 1, function(y) runif(y, min = 0, max = 10)))
+  random <- t(apply(pref, 1, function(y) round(runif(y, min = 0, max = 10), 1)))
   colnames(random) <- colnames(pref)
-  pref <- random
   
+  changeMat <- cbind(1:nrow(pref), sample(1:15, nrow(pref), replace = T))
+  pref[changeMat] <- random[changeMat]
   
   return(pref)
 }
@@ -232,123 +282,219 @@ randomMethod <- function(pref){
 # How do I make this so it changes prefernces n at a time? And how do I make it so they change least if most important, and most if least important? 
 
 
-
-```
-
-Check if this is just anchoring to mvs and randomly changing prefs to = mvs
-
-```{r}
-
-# if (first not first generation, Change Preferences: )
-
-for(p in 1:prefLearningCycles){
+absoluteMethod <- function(pref){
   
-  # make 2 randomMethods calc ( for male AND females)
-  # Overide preferences save as updates come. 
-  if(p > 1) {
-    mPref <- randomMethod(mPref)
-    fPref <- randomMethod(fPref)
-  }
+  # add a parameter where only n number get affected by absolute method (at random?)
+  absolute <- pref - abValue 
+  colnames(absolute) <- colnames(pref)
   
-  # Calculate MV
-  mMVs <- t(apply(mPref, 1, function(x) apply(fTraits, 1, function(y) mvcalc(x, y))))
-  fMVs <- t(apply(fPref, 1, function(x) apply(mTraits, 1, function (y) mvcalc(x, y))))
+  changeMat <- cbind(1:nrow(pref), sample(1:15, nrow(pref), replace = T))
+  pref[changeMat] <- absolute[changeMat]
   
-  # Create choice matrix:
-  mChoice <- matrix(1, nrow(males), nrow(females))
-  fChoice <- matrix(1, nrow(females), nrow(males))
-  
-  
-  for(c in 1:mateChoiceCycles){
-    
-    # Calculate Reward 
-    mReward <- rcalc(mMVs, fChoice, mChoice)
-    fReward <- rcalc(fMVs, mChoice, fChoice)
-    
-    # Choose Mate 
-    mMaxReward <- cbind(1:nrow(males), apply(mReward, 1, which.max))
-    fMaxReward <- cbind(1:nrow(females), apply(fReward, 1, which.max))
-    
-    
-    
-    # Update Choice Matrices
-    mChoice[mMaxReward] <- mChoice[mMaxReward] + 1
-    fChoice[fMaxReward] <- fChoice[fMaxReward] + 1
-    
-    
-  
-  }
-  
-  # Commit to Memory 
-  # Store mReward & fReward in Reward Memory (of MaxReward mates?) and compare vector to memory
-  for(m in 1:nrow(males)){
-    maxNow <- max(mReward[m, ])
-    maxMemory <- max(mRewMemory[m, ])
-      
-    if(maxNow >= maxMemory){
-      mRewMemory[m, ] <- mReward[m, ]
-      mPrefMemory[m, ] <- mPref[m, ]
-      }
-    }
-  
-  for(f in 1:nrow(females)){
-    maxNow <- max(fReward[f, ])
-    maxMemory <- max(fRewMemory[f, ])
-    
-    if(maxNow >= maxMemory){
-      fRewMemory[f, ] <- fReward[f, ]
-      fPrefMemory[f, ] <- fPref[f, ]
-      }
-    }
+  return(pref)
 }
 
 
-# Correlation between learned prefernces and real prefernces. 
 
 
-# Need to standardize outcome and predictor varibles 
-# multivariet model withere i have 15 oucome variables . Later on . 
+```
 
+WORK IN PROGRESS
+
+```{r}
+
+mpUpdate <- function(method = "method", pref) {
+  
+  if(method == "randomMethod") {
+    
+    pref <- randomMethod(pref)
+    
+    } 
+  
+  if(method == "absoluteMethod") {
+        
+    pref <- absoluteMethod(pref)
+    
+    }
+    
+    
+  return(pref)
+}
+
+
+```
+
+# Simulation:
+
+Does mate preference memory map onto own mate value somehow? IS this capturing \[... \] What do i think it should capture?
+
+```{r}
+
+ for(u in 1:methodCycles) {
+   
+# re-sets inital traits after a method; if not: old method pref updates will stay for next update method. I dont want that. 
+   
+   fPref <- matrix(startPref, nrow(females), 15)
+   colnames(fPref) <- traitNames
+   
+   fPrefMemory <- matrix(startPref, nrow(females), 15)
+   colnames(fPrefMemory) <- traitNames
+   fRewMemory <- matrix(startRMem, nrow(females), nrow(males))
+    
+   
+   mPref <- matrix(startPref, nrow(males), 15)
+   colnames(mPref) <- traitNames
+    
+   mPrefMemory <- matrix(startPref, nrow(males), 15)
+   colnames(mPrefMemory) <- traitNames
+   mRewMemory <- matrix(startRMem, nrow(males), nrow(females))
+
+   
+   
+   
+# method cycle 
+   
+   method <- methodList[u]
+   
+   
+  for(l in 1:prefLearningCycles) {
+    
+    # i think this is creating a problem: the if(l > 1) is offseting the u loop on and 
+    if(l > 1){
+      fPref <- mpUpdate(method, fPref)      
+      mPref <- mpUpdate(method, mPref)
+    }
+    # Create choice matrix:
+    fChoice <- matrix(1, nrow(females), nrow(males))
+    mChoice <- matrix(1, nrow(males), nrow(females))
+    
+     # Calculate MV
+    fMV <- t(apply(fPref, 1, function(x) apply(mTraits, 1, function (y) mvcalc(x, y))))
+    mMV <- t(apply(mPref, 1, function(x) apply(fTraits, 1, function(y) mvcalc(x, y))))
+    
+    for(t in 1:prefTestingCycles){
+      
+      # Calculate Reward 
+      fReward <- rcalc(fMV, mChoice, fChoice)
+      mReward <- rcalc(mMV, fChoice, mChoice)
+      
+      
+      # Choose Mate 
+      fMaxReward <- cbind(1:nrow(females), apply(fReward, 1, which.max))
+      mMaxReward <- cbind(1:nrow(males), apply(mReward, 1, which.max))
+      
+      
+      
+      
+      # Update Choice Matrices
+      fChoice[fMaxReward] <- fChoice[fMaxReward] + 1
+      mChoice[mMaxReward] <- mChoice[mMaxReward] + 1
+     
+    
+    }
+    
+# Commit to Memory 
+# Store mReward & fReward in Reward Memory (of MaxReward mates?) and compare vector to memory
+    
+    for(f in 1:nrow(females)){
+      maxNow <- max(fReward[f, ])
+      maxMemory <- max(fRewMemory[f, ])
+      
+      if(maxNow >= maxMemory){
+        fRewMemory[f, ] <- fReward[f, ]
+        fPrefMemory[f, ] <- fPref[f, ]
+      } else {
+        fPref[f, ] <- fPrefMemory[f, ]  
+        
+        }
+      }
+    for(m in 1:nrow(males)){
+      maxNow <- max(mReward[m, ])
+      maxMemory <- max(mRewMemory[m, ])
+        
+      if(maxNow >= maxMemory){
+        mRewMemory[m, ] <- mReward[m, ]
+        mPrefMemory[m, ] <- mPref[m, ]
+      } else{
+        mPref[m, ] <- mPrefMemory[m, ]
+        
+      }
+    } # male memory loop
+    
+    # save 2 diff things: calc average cor between predicted prefs and observed prefs. (to check in converging to value or just bouncing around) 
+    # data.frame ^ 
+    
+    
+# I need to make a for loop that creates a dataframe each loop. Then a for loop inside that to record (m/f)PrefMemory for each testing cycle. 
+    
+# NOPE ^ i need to create a dataframe every time it hits this part of the loop. Save the dataframe"t" <- #dataFromCurrentLoop 
+    
+    
+    
+    if(u == 1){
+      
+      assign(x = paste0("mRandPrefTest", t), value = mPrefMemory)
+      assign(x = paste0("fRandPrefTest", t), value = fPrefMemory)
+      
+    } else if(u == 2){
+      
+      assign(x = paste0("mAbsPrefTest", t), value = mPrefMemory)
+      assign(x = paste0("fAbsPrefTest", t), value = fPrefMemory)
+      
+    }
+    
+      
+    
+    
+    
+  } # prefLearningCycle loop
+   
+## Save runs to analyse ##
+   
+# Save randomMethods outputs; if u == 1, save (f/m)PrefMemory to data frame. 
+   # Save end predicted preferences. 
+   # data.frame^
+   
+# Save absoluteMethods outputs 
+   if(u == 1){
+     mRandLearned <- mPrefMemory
+     fRandLearned <- fPrefMemory
+     
+   } else if(u == 2){
+     
+     mAbsLearned <- mPrefMemory
+     fAbsLearned <- fPrefMemory
+     
+   }
+   
+} # methodCycles loop
+ 
+
+# Testing Preferences Analysis (do values converge?)
+
+
+
+
+
+
+# Learned Correlation 
+mRandLearnedCor <- mean(diag(cor(mRandLearned, males[235:249])))
+fRandLearnedCor <- mean(diag(cor(fRandLearned, females[235:249])))
+
+mAbsLearnedCor <- mean(diag(cor(mAbsLearned, males[235:249])))
+fAbsLearnedCor <- mean(diag(cor(fAbsLearned, females[235:249])))
+
+
+
+
+
+
+
+
+
+
+  # side note, i can check how accurate my model works on single trait preferences. Have every prefernce besides one as the actual values. Then see if the model can accurately come up with a pref value that is similar to the actual value. 
 
 ```
 
 First sentence ; organisms have preferences that guide them towards mates.
-
-```{r}
-# Library
-library(rstanarm)
-library(tidyr)
-```
-
-```{r}
-
-##### ANALYSIS #####
-# Rewrite # Apply function to standardize actual and model prefs, melt into 
-
-# Transform Data #
-
-mPrefMemory <- rowid_to_column(as.data.frame(mPrefMemory), "id")
-mPrefMemory <- mPrefMemory |> pivot_longer(-id, names_to = "trait", names_prefix = "prefMemory_", values_to = "predicted_value")
-
-
-observed <- males[, 235:249] |> as.data.frame() |> rowid_to_column("id")
-observed <- observed |> pivot_longer(-id, names_to = "trait", names_prefix = "ideal_", values_to = "observed_value")
-
-
-d <- left_join(mPrefMemory, observed, by = c("id", "trait"))
-d_z <- d |> group_by(trait) |> mutate(predicted_value = (predicted_value - mean(observed_value))/observed_value, observed_value = (observed_value - mean(observed_value))/observed_value) %>% ungroup()
-
-
-# Multilevel Model #
-
-fit <- stan_glmer(predicted_value ~ observed_value + (1|id), data = d)
-fitSummary <- summary(fit)
-
-fitZ <- stan_glmer(predicted_value ~ observed_value + (1|id), data = d_z)
-fitSummaryZ <- summary(fitZ)
-
-
-plotFit <- ggplot(d_z, aes(y=predicted_value, x=observed_value)) + geom_point() + geom_smooth(method = "lm")
-
-
-```
