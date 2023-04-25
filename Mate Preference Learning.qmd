@@ -105,7 +105,7 @@ maleNum <- 50
 femaleNum <-50
 
 # Methods
-methodList <- c("randomMethod", "absoluteMethod", "absImpMethod", "absRankMethod" )
+methodList <- c("randomMethod", "absoluteMethod", "absImpMethod")
 
 
 # absoluteMethod 
@@ -114,8 +114,9 @@ abValue <- .1
 
 # Cycles 
 methodCycles <- length(methodList)
-prefLearningCycles <- 1000
-prefTestingCycles <- 100
+prefLearningCycles <- 50
+prefTestingCycles <- 1000
+# cor test cycles to find converging val. 
 
 
 
@@ -145,9 +146,6 @@ fTraits <- females[, c(345:359)]
 fImp <- females[, c(283:297)]
 mImp <- males[, c(283:297)]
 
-# rank rating
-fRank <- females[, c(299:313)]
-mRank <- males[, c(299:313)]
 
 
 
@@ -229,7 +227,7 @@ absImpMethod <- function(pref, imp){
   
 
   # x represents rows of importances. Sample() will spit out one number from 1:15
-  changeVec <- apply(imp, 1, function(x) sample(1:15, 1, prob = abs(1 - ((11 - x)/10))))
+  changeVec <- apply(imp, 1, function(x) sample(1:15, 1, prob = 11 - x))
   changeMat <- cbind(1:nrow(pref), changeVec)
   pref[changeMat] <- absolute[changeMat]
   # if less than 0 make it 0, etc. 
@@ -238,24 +236,14 @@ absImpMethod <- function(pref, imp){
 }
 
 
-absRankMethod <- function(pref, ranks){
-  absolute <- pref - abValue 
-  colnames(absolute) <- colnames(pref)
-  
-  changeVec <- apply(ranks, 1, function(x) sample(1:15, 1, prob = abs(1 - ((17 - x)/10))))
-  changeMat <- cbind(1:nrow(pref), changeVec)
-  pref[changeMat] <- absolute[changeMat]
 
-  
-  return(pref)
-}
 ```
 
 mpUpdate
 
 ```{r}
 
-mpUpdate <- function(method = "method", pref, imp, ranks) {
+mpUpdate <- function(method = "method", pref, imp) {
   
   if(method == "randomMethod") {
     
@@ -277,15 +265,7 @@ mpUpdate <- function(method = "method", pref, imp, ranks) {
     pref <- absImpMethod(pref, imp)
     
   }
-  
-  
-  
-  if(method == "absRankMethod"){
-    
-    pref <- absRankMethod(pref, ranks)
-    
-  }
-    
+
     
   return(pref)
 }
@@ -326,19 +306,11 @@ mpUpdate <- function(method = "method", pref, imp, ranks) {
   for(l in 1:prefLearningCycles) {
     
     # makes sure the right method is being used. 
-    if((l > 1) && (u == 1) || (u == 2)){
-      fPref <- mpUpdate(method, pref = fPref)      
-      mPref <- mpUpdate(method, pref = mPref)
-    } else if((l > 1) && (u == 3)){
+    if((l > 1) {
       fPref <- mpUpdate(method, pref = fPref, imp = fImp)
       mPref <- mpUpdate(method, pref = mPref, imp = mImp)
-    } else if((l > 1) && (u == 4)){
-      fPref <- mpUpdate(method, pref = fPref, ranks = fRank)
-      mPref <- mpUpdate(method, pref = mPref, ranks = mRank)
     } 
 
-# FOR SOME REASON THIS IS NOT RUNNING. BUT U == 4 DOES RUN IF I RUN IT INDIVIDUALLY. WHY?    
-    
     
     
     # Create choice matrix:
@@ -476,8 +448,8 @@ fAbsLearnedCor <- mean(diag(cor(fAbsLearned, females[235:249])))
 mAbsImpLearnedCor <- mean(diag(cor(mAbsImpLearned, males[235:249])))
 fAbsImpLearnedCor <- mean(diag(cor(fAbsImpLearned, females[235:249])))
 
-mAbsRankLearnedCor <-  mean(diag(cor(mAbsRankLearned, males[235:249])))
-fAbsRankLearnedCor <-  mean(diag(cor(fAbsRankLearned, males[235:249])))
+
+
 
 
 ```
