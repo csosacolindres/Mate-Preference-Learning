@@ -77,20 +77,20 @@ Week 4 Have functional draft for a few methods
 
 # the 15 Traits
 traitNames <- paste0(c("affectionate", 
-                "ambition", 
-                "artistic", 
-                "disposition", 
-                "family", 
-                "health", 
-                "humor", 
-                "intelligent", 
-                "kind", 
-                "parenting", 
-                "physatt", 
-                "religious", 
-                "resources", 
-                "sexy", 
-                "status"))
+                       "ambition", 
+                       "artistic", 
+                       "disposition", 
+                       "family", 
+                       "health", 
+                       "humor", 
+                       "intelligent", 
+                       "kind", 
+                       "parenting", 
+                       "physatt", 
+                       "religious", 
+                       "resources", 
+                       "sexy", 
+                       "status"))
 
 # Starting Values for Prefernces, Reward Memory. 
 startPref <- 10
@@ -101,12 +101,11 @@ recieved <- 1
 sent <- 1
 
 # number of males and females
-maleNum <- 100
-femaleNum <-100
+maleNum <- 50
+femaleNum <-50
 
 # Methods
-
-methodList <- c("randomMethod", "absoluteMethod")
+methodList <- c("randomMethod", "absoluteMethod", "absImpMethod", "absRankMethod" )
 
 
 # absoluteMethod 
@@ -115,8 +114,8 @@ abValue <- .1
 
 # Cycles 
 methodCycles <- length(methodList)
-prefLearningCycles <- 10000
-prefTestingCycles <- 1000
+prefLearningCycles <- 1000
+prefTestingCycles <- 100
 
 
 
@@ -130,105 +129,25 @@ Agent Generation
 # Human_data; PIN(3); sex(4); Ideal(235:249) Affectionate, Ambition, Artistic, Disposition, Family, Health, Humor, Intelligent, Kind, Parenting, Physical Attractiveness, Religious, Resources, Sexy, Status; Importance(283:297) " ; Self Composite(345:359) " ; Self Mate Value Composite(418) "
 
 data <- read.csv("Human_data.csv")
-
-
-data <- data[complete.cases(data[, c(235:249)]),]
-# Sampled 10 people to check if things are working right. 
+data <- data[complete.cases(data[, c(235:249, 345:359, 283:297, 299:213)]),]
 
 females <- data[data$sex == 0,]
 males <- data[data$sex == 1,]
 
-
+# number of participants
 females <- females[sample(1:nrow(females), femaleNum),]
 males <- males[sample(1:nrow(males), maleNum),]
 
-
-
-# MALES: TRAITS ; PREFERENCE VECTOR, MEMEORY ; REWARD VECTOR, MEMORY
 mTraits <- males[, c(345:359)]
-mPref <- matrix(startPref, nrow(males), 15)
-colnames(mPref) <- c("affectionate", 
-                     "ambition", 
-                     "artistic", 
-                     "disposition", 
-                     "family", 
-                     "health", 
-                     "humor", 
-                     "intelligent", 
-                     "kind", 
-                     "parenting", 
-                     "physatt", 
-                     "religious", 
-                     "resources", 
-                     "sexy", 
-                     "status")
-mPrefMemory <- matrix(startPref, nrow(males), 15)
-colnames(mPrefMemory) <- c("affectionate", 
-                           "ambition", 
-                           "artistic", 
-                           "disposition", 
-                           "family", 
-                           "health", 
-                           "humor", 
-                           "intelligent", 
-                           "kind", 
-                           "parenting", 
-                           "physatt", 
-                           "religious", 
-                           "resources", 
-                           "sexy", 
-                           "status")
-
-mRewMemory <- matrix(startRMem, nrow(males), nrow(females))
-
-
-
-
-
-
-# FEMALES: PREFERENCE VECTOR, MEMORY ; REWARD VECTOR, MEMORY
 fTraits <- females[, c(345:359)]
-fPref <- matrix(startPref, nrow(females), 15)
-colnames(fPref) <- c("affectionate", 
-                     "ambition", 
-                     "artistic", 
-                     "disposition", 
-                     "family", 
-                     "health", 
-                     "humor", 
-                     "intelligent", 
-                     "kind", 
-                     "parenting", 
-                     "physatt", 
-                     "religious", 
-                     "resources", 
-                     "sexy", 
-                     "status")
 
-fPrefMemory <- matrix(startPref, nrow(females), 15)
-colnames(fPrefMemory) <-c("affectionate", 
-                          "ambition", 
-                          "artistic", 
-                          "disposition", 
-                          "family", 
-                          "health", 
-                          "humor", 
-                          "intelligent", 
-                          "kind", 
-                          "parenting", 
-                          "physatt", 
-                          "religious", 
-                          "resources", 
-                          "sexy", 
-                          "status")
+# Importance rating
+fImp <- females[, c(283:297)]
+mImp <- males[, c(283:297)]
 
-fRewMemory <- matrix(startRMem, nrow(females), nrow(males))
-
-
-# Putting the AGENTS together. Make traits, preferences, and preference memory as a part of the agent. The ENVIORNMENT is the rewards, reward memory, and the choices.
-fAgents <- cbind(fTraits, fPref, fPrefMemory)
-mAgents <- cbind(mTraits, mPref, mPrefMemory)
-
+# rank rating
+fRank <- females[, c(299:313)]
+mRank <- males[, c(299:313)]
 
 
 
@@ -251,17 +170,16 @@ mvcalc <- function(pref, traits){
 rcalc <- function(mv, recieved, sent) {
   
   interestRatio <- t(recieved) / sent
-  
   # make interest ratio max = 1 , if recived / sent > 1 , set it to 1. # anti-stalker exploit 
-  
   interestRatio[interestRatio > 1] <- 1
-  
   reward <- mv * interestRatio 
-  
   return(reward)
 }
 
+
 ```
+
+Methods
 
 ```{r}
 # make randomMethod only take one prefernce at a time... on second thought, this could be controlled by parameter; randomly change n preferences at a time. 
@@ -288,22 +206,56 @@ absoluteMethod <- function(pref){
   absolute <- pref - abValue 
   colnames(absolute) <- colnames(pref)
   
+
   changeMat <- cbind(1:nrow(pref), sample(1:15, nrow(pref), replace = T))
   pref[changeMat] <- absolute[changeMat]
+  # if less than 0 make it 0, etc. 
+  
+  return(pref)
+}
+
+  # in sample function, add prob arguement such that the probabilty of trait value changing in proportion to imporntace (11 - importance matrix)
+# absoluteMethodImp <- 
+
+# add this. 
+
+#apply(q,1,function(x) sample(1:2,1,prob=x))
+
+absImpMethod <- function(pref, imp){
+  # important means what? 10 on religion being important, does that mean its imporntat becuase the trait is desirable or not. 
+  # add a parameter where only n number get affected by absolute method (at random?)
+  absolute <- pref - abValue 
+  colnames(absolute) <- colnames(pref)
+  
+
+  # x represents rows of importances. Sample() will spit out one number from 1:15
+  changeVec <- apply(imp, 1, function(x) sample(1:15, 1, prob = abs(1 - ((11 - x)/10))))
+  changeMat <- cbind(1:nrow(pref), changeVec)
+  pref[changeMat] <- absolute[changeMat]
+  # if less than 0 make it 0, etc. 
   
   return(pref)
 }
 
 
+absRankMethod <- function(pref, ranks){
+  absolute <- pref - abValue 
+  colnames(absolute) <- colnames(pref)
+  
+  changeVec <- apply(ranks, 1, function(x) sample(1:15, 1, prob = abs(1 - ((17 - x)/10))))
+  changeMat <- cbind(1:nrow(pref), changeVec)
+  pref[changeMat] <- absolute[changeMat]
 
-
+  
+  return(pref)
+}
 ```
 
-WORK IN PROGRESS
+mpUpdate
 
 ```{r}
 
-mpUpdate <- function(method = "method", pref) {
+mpUpdate <- function(method = "method", pref, imp, ranks) {
   
   if(method == "randomMethod") {
     
@@ -311,11 +263,28 @@ mpUpdate <- function(method = "method", pref) {
     
     } 
   
+  
   if(method == "absoluteMethod") {
         
     pref <- absoluteMethod(pref)
+
+  }
+  
+
+  
+  if(method == "absImpMethod"){
     
-    }
+    pref <- absImpMethod(pref, imp)
+    
+  }
+  
+  
+  
+  if(method == "absRankMethod"){
+    
+    pref <- absRankMethod(pref, ranks)
+    
+  }
     
     
   return(pref)
@@ -325,8 +294,6 @@ mpUpdate <- function(method = "method", pref) {
 ```
 
 # Simulation:
-
-Does mate preference memory map onto own mate value somehow? IS this capturing \[... \] What do i think it should capture?
 
 ```{r}
 
@@ -339,31 +306,41 @@ Does mate preference memory map onto own mate value somehow? IS this capturing \
    
    fPrefMemory <- matrix(startPref, nrow(females), 15)
    colnames(fPrefMemory) <- traitNames
+   
    fRewMemory <- matrix(startRMem, nrow(females), nrow(males))
     
    
    mPref <- matrix(startPref, nrow(males), 15)
    colnames(mPref) <- traitNames
-    
+   
    mPrefMemory <- matrix(startPref, nrow(males), 15)
    colnames(mPrefMemory) <- traitNames
+   
    mRewMemory <- matrix(startRMem, nrow(males), nrow(females))
 
    
-   
-   
-# method cycle 
-   
+   # method cycled 
    method <- methodList[u]
    
    
   for(l in 1:prefLearningCycles) {
     
-    # i think this is creating a problem: the if(l > 1) is offseting the u loop on and 
-    if(l > 1){
-      fPref <- mpUpdate(method, fPref)      
-      mPref <- mpUpdate(method, mPref)
-    }
+    # makes sure the right method is being used. 
+    if((l > 1) && (u == 1) || (u == 2)){
+      fPref <- mpUpdate(method, pref = fPref)      
+      mPref <- mpUpdate(method, pref = mPref)
+    } else if((l > 1) && (u == 3)){
+      fPref <- mpUpdate(method, pref = fPref, imp = fImp)
+      mPref <- mpUpdate(method, pref = mPref, imp = mImp)
+    } else if((l > 1) && (u == 4)){
+      fPref <- mpUpdate(method, pref = fPref, ranks = fRank)
+      mPref <- mpUpdate(method, pref = mPref, ranks = mRank)
+    } 
+
+# FOR SOME REASON THIS IS NOT RUNNING. BUT U == 4 DOES RUN IF I RUN IT INDIVIDUALLY. WHY?    
+    
+    
+    
     # Create choice matrix:
     fChoice <- matrix(1, nrow(females), nrow(males))
     mChoice <- matrix(1, nrow(males), nrow(females))
@@ -429,12 +406,17 @@ Does mate preference memory map onto own mate value somehow? IS this capturing \
     
 # NOPE ^ i need to create a dataframe every time it hits this part of the loop. Save the dataframe"t" <- #dataFromCurrentLoop 
     
+
+    # at the end this loop, record cor , dont need each trait value
+    #ex: # Save in vector that has NA (make a vector before and then populate it). mRandMemoryCor <- mean(diag(cor(mPrefMemory, males[235:249])))
+    
+    
     
     
     if(u == 1){
       
-      assign(x = paste0("mRandPrefTest", t), value = mPrefMemory)
-      assign(x = paste0("fRandPrefTest", t), value = fPrefMemory)
+      assign(x = paste0("mRandPrefTest", l), value = mPrefMemory)
+      assign(x = paste0("fRandPrefTest", l), value = fPrefMemory)
       
     } else if(u == 2){
       
@@ -465,14 +447,21 @@ Does mate preference memory map onto own mate value somehow? IS this capturing \
      mAbsLearned <- mPrefMemory
      fAbsLearned <- fPrefMemory
      
+   } else if(u == 3){
+     
+     mAbsImpLearned <- mPrefMemory
+     fAbsImpLearned <- fPrefMemory
+     
+   } else if(u == 4){
+     mAbsRankLearned <- mPrefMemory
+     fAbsRankLearned <- fPrefMemory
+     
    }
    
 } # methodCycles loop
  
 
 # Testing Preferences Analysis (do values converge?)
-
-
 
 
 
@@ -484,17 +473,11 @@ fRandLearnedCor <- mean(diag(cor(fRandLearned, females[235:249])))
 mAbsLearnedCor <- mean(diag(cor(mAbsLearned, males[235:249])))
 fAbsLearnedCor <- mean(diag(cor(fAbsLearned, females[235:249])))
 
+mAbsImpLearnedCor <- mean(diag(cor(mAbsImpLearned, males[235:249])))
+fAbsImpLearnedCor <- mean(diag(cor(fAbsImpLearned, females[235:249])))
 
+mAbsRankLearnedCor <-  mean(diag(cor(mAbsRankLearned, males[235:249])))
+fAbsRankLearnedCor <-  mean(diag(cor(fAbsRankLearned, males[235:249])))
 
-
-
-
-
-
-
-
-  # side note, i can check how accurate my model works on single trait preferences. Have every prefernce besides one as the actual values. Then see if the model can accurately come up with a pref value that is similar to the actual value. 
 
 ```
-
-First sentence ; organisms have preferences that guide them towards mates.
