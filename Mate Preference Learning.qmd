@@ -454,7 +454,7 @@ fTrialByTrial <- matrix(data = NA, nrow = prefLearningCycles, ncol = length(meth
       
       if(maxNow >= maxMemory){
         fRewMemory[f, ] <- fReward[f, ]
-        fPrefMemory[f, ] <- fPref[f, ]
+        fPrefMemory[f, ] <- as.numeric(fPref[f, ])
       } else {
         fPref[f, ] <- fPrefMemory[f, ]  
         
@@ -466,7 +466,7 @@ fTrialByTrial <- matrix(data = NA, nrow = prefLearningCycles, ncol = length(meth
         
       if(maxNow >= maxMemory){
         mRewMemory[m, ] <- mReward[m, ]
-        mPrefMemory[m, ] <- mPref[m, ]
+        mPrefMemory[m, ] <- as.numeric(mPref[m, ])
       } else{
         mPref[m, ] <- mPrefMemory[m, ]
         
