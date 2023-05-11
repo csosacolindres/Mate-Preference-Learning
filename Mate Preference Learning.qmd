@@ -92,7 +92,7 @@ traitNames <- paste0(c("affectionate",
                        "sexy", 
                        "status"))
 
-# Starting Values for Prefernces, Reward Memory. 
+# Starting Values for Prefernces and Reward Memory. 
 startPref <- 10
 startRMem <- 0
 
@@ -101,22 +101,28 @@ recieved <- 1
 sent <- 1
 
 # number of males and females
-maleNum <- 50
-femaleNum <-50
+maleNum <- 30
+femaleNum <- 30
 
-# Methods
-methodList <- c("randomMethod", "absoluteMethod", "absImpMethod")
+# All Methods
+methodList <- c("randomMethod", "absoluteMethod", "absImpMethod", "allMagMethod", "magnitudeMethod", "magImpMethod", "magUpDownMethod")
 
+# Current method(s) being used
+methodList <- c("allMagMethod", "magUpDownMethod")
 
-# absoluteMethod 
+# absolute method(s) subtracting amount from mate preferences
 abValue <- .1
+
+# magnitude method(s) largest change value & probability of magVal going down vs up. 
+magVal <- .5
+downProb <- .8
 
 
 # Cycles 
 methodCycles <- length(methodList)
-prefLearningCycles <- 50
-prefTestingCycles <- 1000
-# cor test cycles to find converging val. 
+prefLearningCycles <- 3000
+prefTestingCycles <- 60
+
 
 
 
@@ -125,13 +131,12 @@ prefTestingCycles <- 1000
 Agent Generation
 
 ```{r}
-
-
 # Human_data; PIN(3); sex(4); Ideal(235:249) Affectionate, Ambition, Artistic, Disposition, Family, Health, Humor, Intelligent, Kind, Parenting, Physical Attractiveness, Religious, Resources, Sexy, Status; Importance(283:297) " ; Self Composite(345:359) " ; Self Mate Value Composite(418) "
 
 data <- read.csv("Human_data.csv")
-data <- data[complete.cases(data[, c(235:249, 345:359, 283:297, 299:213)]),]
+data <- data[complete.cases(data[, c(6, 235:249, 345:359, 283:297, 299:213)]),]
 
+# seperating into sexes
 females <- data[data$sex == 0,]
 males <- data[data$sex == 1,]
 
@@ -139,14 +144,13 @@ males <- data[data$sex == 1,]
 females <- females[sample(1:nrow(females), femaleNum),]
 males <- males[sample(1:nrow(males), maleNum),]
 
+# participant's traits 
 mTraits <- males[, c(345:359)]
 fTraits <- females[, c(345:359)]
 
-# Importance rating
+# participant's importance ratings 
 fImp <- females[, c(283:297)]
 mImp <- males[, c(283:297)]
-
-
 
 
 
@@ -161,16 +165,18 @@ mvcalc <- function(pref, traits){
   names(pref) <- 1:15
   names(traits) <- 1:15
   mv <- 10 *(-1 *(dist(rbind(pref, traits))) + sqrt(10^2 *15)) / sqrt(10^2 *15)
+  
   return(mv)
 }
 
-# Reward Calculation : interest recieved, interest sent
+
+# Reward Calculation : interest recieved / interest sent 
 rcalc <- function(mv, recieved, sent) {
   
   interestRatio <- t(recieved) / sent
-  # make interest ratio max = 1 , if recived / sent > 1 , set it to 1. # anti-stalker exploit 
   interestRatio[interestRatio > 1] <- 1
   reward <- mv * interestRatio 
+  
   return(reward)
 }
 
@@ -180,10 +186,8 @@ rcalc <- function(mv, recieved, sent) {
 Methods
 
 ```{r}
-# make randomMethod only take one prefernce at a time... on second thought, this could be controlled by parameter; randomly change n preferences at a time. 
 
-# Random Method: Change row values for every col to a random number. Don't change highest reward one. 
-# Base Random Method
+# Random Method: Selects 1 random trait to change. Changes selected trait to random mate preference value.
 randomMethod <- function(pref){
   
   random <- t(apply(pref, 1, function(y) round(runif(y, min = 0, max = 10), 1)))
@@ -195,47 +199,105 @@ randomMethod <- function(pref){
   return(pref)
 }
   
-# How do I make this so it changes prefernces n at a time? And how do I make it so they change least if most important, and most if least important? 
 
 
+# Absolute Method: Selects all trait to change. Changes traits down by abValue amount.
 absoluteMethod <- function(pref){
   
-  # add a parameter where only n number get affected by absolute method (at random?)
   absolute <- pref - abValue 
   colnames(absolute) <- colnames(pref)
   
-
   changeMat <- cbind(1:nrow(pref), sample(1:15, nrow(pref), replace = T))
   pref[changeMat] <- absolute[changeMat]
-  # if less than 0 make it 0, etc. 
   
   return(pref)
 }
 
-  # in sample function, add prob arguement such that the probabilty of trait value changing in proportion to imporntace (11 - importance matrix)
-# absoluteMethodImp <- 
 
-# add this. 
 
-#apply(q,1,function(x) sample(1:2,1,prob=x))
-
+# Absolute-Importance Method: Selects a trait to change proportional to how important the triat is to the specific participant. Changes selected trait down by abValue.  
 absImpMethod <- function(pref, imp){
-  # important means what? 10 on religion being important, does that mean its imporntat becuase the trait is desirable or not. 
-  # add a parameter where only n number get affected by absolute method (at random?)
+  
   absolute <- pref - abValue 
   colnames(absolute) <- colnames(pref)
   
-
-  # x represents rows of importances. Sample() will spit out one number from 1:15
   changeVec <- apply(imp, 1, function(x) sample(1:15, 1, prob = 11 - x))
   changeMat <- cbind(1:nrow(pref), changeVec)
   pref[changeMat] <- absolute[changeMat]
-  # if less than 0 make it 0, etc. 
   
   return(pref)
 }
 
 
+
+## PROBLEM ##
+# All-Magnitude Method: Selects all traits. Changes values down by mag (a value proportional to importance with a max amount that preference value can change). More important traits go down less amount. Less important traits go down less amount.
+allMagMethod <- function(pref, imp, magVal){
+  
+  mag <- ((11-imp)/11) * magVal
+  colnames(mag) <- colnames(pref)
+  
+  pref <- pref - mag
+
+  return(pref)
+}
+
+
+
+# Magnitude Method: Selects 1 trait at random. Changes values down by mag (a value proportional to importance and a max amount that preference value decreses by). More important traits go down less amount. Less important traits go down less amount.
+magnitudeMethod <- function(pref, imp, magVal){
+  
+  mag <- ((11-imp)/11) * magVal
+  colnames(mag) <- colnames(pref)
+  magnitude <- pref - mag
+  
+  changeVec <- apply(imp, 1, function(x) sample(1:15, 1))
+  changeMat <- cbind(1:nrow(pref), changeVec)
+  pref[changeMat] <- magnitude[changeMat]
+
+  return(pref)
+}
+
+
+
+# Magnitude-Importance Method: Selects 1 trait proportional to how important the trait is (if more important, less likley to be picked. If less important, more likely to be picked). The the preference values decrease by mag (a value proportional to importance and a max amount that preference value decreases by). More important traits decrease less. Less important traits decrease more. 
+magImpMethod <- function(pref, imp, magVal){
+  
+  mag <- ((11-imp)/11) * magVal
+  colnames(mag) <- colnames(pref)
+  magnitude <- pref - mag
+  
+  changeVec <- apply(imp, 1, function(x) sample(1:15, 1, prob = 11 - x))
+  changeMat <- cbind(1:nrow(pref), changeVec)
+  pref[changeMat] <- magnitude[changeMat]
+
+  return(pref)
+}
+
+
+
+## PROBLEM 
+# Magnitude Up-Down Method: Selects all traits. This can decrease and increase preference values. The traits increase or decrease depending on a weighted proportion (downProb). The preference values decrease by mag (a value proportional to importance and a max amount that preference value decreases by) where ore important traits decrease less. Less important traits decrease more. The preference values increase by mag where the more important traits increase more and the less important traits increase less. 
+magUpDownMethod <- function(pref, imp, magVal, downProb){
+  
+  if(rbinom(1, 1, prob = downProb)){
+    
+    mag <- ((11-imp)/11) * magVal
+    colnames(mag) <- colnames(pref)
+    pref <- pref - mag
+    
+  } else {
+     
+    mag <- ((imp + 1)/11) * magVal
+    colnames(mag) <- colnames(pref)
+    
+    pref <- pref + mag
+    pref[pref > 10] <- 10
+     
+  }
+  
+  return(pref)
+}
 
 ```
 
@@ -243,7 +305,7 @@ mpUpdate
 
 ```{r}
 
-mpUpdate <- function(method = "method", pref, imp) {
+mpUpdate <- function(method = "method", pref, imp, magVal, downProb) {
   
   if(method == "randomMethod") {
     
@@ -252,23 +314,67 @@ mpUpdate <- function(method = "method", pref, imp) {
     } 
   
   
+  
   if(method == "absoluteMethod") {
         
     pref <- absoluteMethod(pref)
-
-  }
+    
+    }
   
 
   
-  if(method == "absImpMethod"){
+  if(method == "absImpMethod") {
     
     pref <- absImpMethod(pref, imp)
     
-  }
-
+    }
     
+  
+  
+  if(method == "magnitudeMethod") {
+    
+    pref <- magnitudeMethod(pref, imp, magVal)
+    
+    }
+  
+  
+  
+  if(method == "magImpMethod") {
+  
+    pref <- magImpMethod(pref, imp, magVal)
+  
+  
+    }
+  
+  
+
+  if(method == "allMagMethod"){
+    
+    pref <- allMagMethod(pref, imp, magVal)
+    
+    }
+  
+  
+  
+  if(method == "magUpDownMethod"){
+   
+    pref <- magUpDownMethod(pref, imp, magVal, downProb)
+    
+    }
+  
+ 
   return(pref)
 }
+
+
+```
+
+Matrices for Statistics
+
+```{r}
+# Storing Trial by trial correlations ... i didnt know where else to put this and i didnt want to put it in simulaiton... 
+mTrialByTrial <- matrix(data = NA, nrow = prefLearningCycles, ncol = length(methodList)) 
+fTrialByTrial <- matrix(data = NA, nrow = prefLearningCycles, ncol = length(methodList))
 
 
 ```
@@ -276,6 +382,7 @@ mpUpdate <- function(method = "method", pref, imp) {
 # Simulation:
 
 ```{r}
+
 
  for(u in 1:methodCycles) {
    
@@ -306,13 +413,11 @@ mpUpdate <- function(method = "method", pref, imp) {
   for(l in 1:prefLearningCycles) {
     
     # makes sure the right method is being used. 
-    if((l > 1) {
-      fPref <- mpUpdate(method, pref = fPref, imp = fImp)
-      mPref <- mpUpdate(method, pref = mPref, imp = mImp)
+    if(l > 1) {
+      fPref <- mpUpdate(method, pref = fPref, imp = fImp, magVal = magVal, downProb = downProb)
+      mPref <- mpUpdate(method, pref = mPref, imp = mImp, magVal = magVal, downProb = downProb)
     } 
 
-    
-    
     # Create choice matrix:
     fChoice <- matrix(1, nrow(females), nrow(males))
     mChoice <- matrix(1, nrow(males), nrow(females))
@@ -342,9 +447,7 @@ mpUpdate <- function(method = "method", pref, imp) {
     
     }
     
-# Commit to Memory 
-# Store mReward & fReward in Reward Memory (of MaxReward mates?) and compare vector to memory
-    
+# Commit to Memory. If new reward is higher than old reward, replace old mate preference set with new mate preference set. If not, keep old mate preference set. 
     for(f in 1:nrow(females)){
       maxNow <- max(fReward[f, ])
       maxMemory <- max(fRewMemory[f, ])
@@ -370,86 +473,43 @@ mpUpdate <- function(method = "method", pref, imp) {
       }
     } # male memory loop
     
-    # save 2 diff things: calc average cor between predicted prefs and observed prefs. (to check in converging to value or just bouncing around) 
-    # data.frame ^ 
+  
+  
     
     
-# I need to make a for loop that creates a dataframe each loop. Then a for loop inside that to record (m/f)PrefMemory for each testing cycle. 
-    
-# NOPE ^ i need to create a dataframe every time it hits this part of the loop. Save the dataframe"t" <- #dataFromCurrentLoop 
+# Saves trial by trial correlations for each method being used.
+    mTrialByTrial[l, u] <- mean(diag(cor(mPrefMemory, males[235:249])))
+    fTrialByTrial[l, u] <- mean(diag(cor(fPrefMemory, females[235:249])))  
     
 
-    # at the end this loop, record cor , dont need each trait value
-    #ex: # Save in vector that has NA (make a vector before and then populate it). mRandMemoryCor <- mean(diag(cor(mPrefMemory, males[235:249])))
-    
-    
-    
-    
-    if(u == 1){
-      
-      assign(x = paste0("mRandPrefTest", l), value = mPrefMemory)
-      assign(x = paste0("fRandPrefTest", l), value = fPrefMemory)
-      
-    } else if(u == 2){
-      
-      assign(x = paste0("mAbsPrefTest", t), value = mPrefMemory)
-      assign(x = paste0("fAbsPrefTest", t), value = fPrefMemory)
-      
-    }
-    
-      
-    
-    
     
   } # prefLearningCycle loop
    
-## Save runs to analyse ##
-   
-# Save randomMethods outputs; if u == 1, save (f/m)PrefMemory to data frame. 
-   # Save end predicted preferences. 
-   # data.frame^
-   
+# PROBLEM. MAKE THE NEW DATA.FRAME. 
 # Save absoluteMethods outputs 
-   if(u == 1){
-     mRandLearned <- mPrefMemory
-     fRandLearned <- fPrefMemory
-     
-   } else if(u == 2){
-     
-     mAbsLearned <- mPrefMemory
-     fAbsLearned <- fPrefMemory
-     
-   } else if(u == 3){
-     
-     mAbsImpLearned <- mPrefMemory
-     fAbsImpLearned <- fPrefMemory
-     
-   } else if(u == 4){
-     mAbsRankLearned <- mPrefMemory
-     fAbsRankLearned <- fPrefMemory
-     
-   }
+   # if(u == 1){
+   #   mRandLearned <- mPrefMemory
+   #   fRandLearned <- fPrefMemory
+   #   
+   # } else if(u == 2){
+   #   
+   #   mAbsLearned <- mPrefMemory
+   #   fAbsLearned <- fPrefMemory
+   #   
+   # } else if(u == 3){
+   #   
+   #   mAbsImpLearned <- mPrefMemory
+   #   fAbsImpLearned <- fPrefMemory
+   #   
+   # } else if(u == 4){
+   #   mAbsRankLearned <- mPrefMemory
+   #   fAbsRankLearned <- fPrefMemory
+   #   
+   # }
+
    
 } # methodCycles loop
  
-
-# Testing Preferences Analysis (do values converge?)
-
-
-
-
-# Learned Correlation 
-mRandLearnedCor <- mean(diag(cor(mRandLearned, males[235:249])))
-fRandLearnedCor <- mean(diag(cor(fRandLearned, females[235:249])))
-
-mAbsLearnedCor <- mean(diag(cor(mAbsLearned, males[235:249])))
-fAbsLearnedCor <- mean(diag(cor(fAbsLearned, females[235:249])))
-
-mAbsImpLearnedCor <- mean(diag(cor(mAbsImpLearned, males[235:249])))
-fAbsImpLearnedCor <- mean(diag(cor(fAbsImpLearned, females[235:249])))
-
-
-
 
 
 ```
