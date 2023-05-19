@@ -38,8 +38,7 @@ editor: visual
 
 4.  Cycle back to #2 (change preferences relative to memory by methods---for now only Random) until preferences are no longer changing.
 
-```{r}
-#PARAMETERS
+```{r parameters}
 
 # the 15 Traits
 traitNames <- paste0(c("affectionate", 
@@ -78,8 +77,8 @@ downProb <- c(rep(NA,6),.8)
 
 
 # Cycles 
-prefLearningCycles <- rep(maleNum*30,7)
-prefTestingCycles <- rep(50,7)
+prefLearningCycles <- rep(50,7)
+prefTestingCycles <- rep(maleNum*3,7)
 
 
 #Combine all parameter settings into a matrix for looping
@@ -243,6 +242,7 @@ Agent Generation
 
 data <- read.csv("Human_data.csv")
 data <- data[complete.cases(data[, c(6, 235:249, 345:359, 283:297, 299:213)]),]
+data <- data[data$CIN %in% data$CIN[duplicated(data$CIN)],]
 
 # seperating into sexes
 females <- data[data$sex == 0, c(1,3:4,235:249,283:297,345:359)]
@@ -319,7 +319,7 @@ for (o in 1:modelLoops) {
         )
         
         mPref <- mpUpdate(
-          pMatrix$method,
+          pMatrix$method[p],
           pref = mPref,
           imp = mImp,
           abValue = pMatrix$abValue[p],
