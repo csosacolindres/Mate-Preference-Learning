@@ -63,11 +63,11 @@ startRMem <- 0
 
 
 # number of males and females
-maleNum <- 30
-femaleNum <- 30
+maleNum <- 400
+femaleNum <- 400
 
 # All Methods
-methodList <- c("randomMethod", "absoluteMethod", "absImpMethod", "allMagMethod", "magnitudeMethod", "magImpMethod", "magUpDownMethod")
+methodList <- c("randomMethod", "absoluteMethod", "absImpMethod", "magnitudeMethod", "magImpMethod", "allMagMethod", "magUpDownMethod")
 
 # absolute method(s) subtracting amount from mate preferences
 abValue <- c(NA,rep(.1,2),rep(.5,4))
@@ -264,6 +264,8 @@ mImp <- as.matrix(males[, c(19:33)])
 
 # Simulation:
 
+Started: 5/12 , 10:30 pm
+
 ```{r}
 
 
@@ -429,5 +431,8 @@ for (o in 1:modelLoops) {
 #Remove the unnecessary rows of NAs from the results dataframes
 trialCors<-trialCors[-1,]
 prefData<-prefData[-1,]
+
+write.csv(trialCors, file = "TrialCorrelationResults.csv")
+write.csv(prefData), file = "PrefDaResults.csv")
 
 ```
