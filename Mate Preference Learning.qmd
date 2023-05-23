@@ -63,8 +63,8 @@ startRMem <- 0
 
 
 # number of males and females
-maleNum <- 400
-femaleNum <- 400
+maleNum <- 458 
+femaleNum <- 458
 
 # All Methods
 methodList <- c("randomMethod", "absoluteMethod", "absImpMethod", "magnitudeMethod", "magImpMethod", "allMagMethod", "magUpDownMethod")
@@ -77,7 +77,7 @@ downProb <- c(rep(NA,6),.8)
 
 
 # Cycles 
-prefLearningCycles <- rep(50,7)
+prefLearningCycles <- rep(100,7)
 prefTestingCycles <- rep(maleNum*3,7)
 
 
@@ -90,7 +90,7 @@ pMatrix<-data.frame("method"=methodList,
 
 
 #Number of times to repeat each model
-modelLoops<-1
+modelLoops<- 30
 
 ```
 
@@ -264,8 +264,6 @@ mImp <- as.matrix(males[, c(19:33)])
 
 # Simulation:
 
-Started: 5/12 , 10:30 pm
-
 ```{r}
 
 
@@ -433,6 +431,26 @@ trialCors<-trialCors[-1,]
 prefData<-prefData[-1,]
 
 write.csv(trialCors, file = "TrialCorrelationResults.csv")
-write.csv(prefData), file = "PrefDaResults.csv")
+write.csv(prefData, file = "PrefDataResults.csv")
+
+```
+
+Stats
+
+```{r}
+
+# cut this to 20 model runs. present that. 
+# maek new data frame == trial cors where o = 1
+
+plotCors <- trialCors[trialCors$o==1, ]
+# average performace across all teh model loops.
+plotCors$r <- c(tapply(trialCors$r, list(trialCors$trial, trialCors$method), mean))
+
+# plot r 
+ggplot(plotCors, mapping = aes(x = trial, y = r, color = method)) + geom_line() + labs(x = "Mate Preference Adjustments", y = "Cor. Between Real and Agent Mate Preferences", title = "Performance of Mate Preference Adjusting Methods")
+
+ggplot(plotCors, mapping = aes(x = trial, y = r, color = method)) + geom_smooth(method = lm)
+
+# do similar thing for sex differernces. 
 
 ```
