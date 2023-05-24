@@ -430,8 +430,8 @@ for (o in 1:modelLoops) {
 trialCors<-trialCors[-1,]
 prefData<-prefData[-1,]
 
-write.csv(trialCors, file = "TrialCorrelationResults.csv")
-write.csv(prefData, file = "PrefDataResults.csv")
+write.csv(trialCors, file = paste0("TrialCorrelationResults", Sys.time(), " .csv"))
+write.csv(prefData, file = paste0("PrefDataResults", Sys.time(), " .csv"))
 
 ```
 
@@ -447,9 +447,8 @@ plotCors <- trialCors[trialCors$o==1, ]
 plotCors$r <- c(tapply(trialCors$r, list(trialCors$trial, trialCors$method), mean))
 
 # plot r 
-ggplot(plotCors, mapping = aes(x = trial, y = r, color = method)) + geom_line() + labs(x = "Mate Preference Adjustments", y = "Cor. Between Real and Agent Mate Preferences", title = "Performance of Mate Preference Adjusting Methods")
+ggplot(plotCors, mapping = aes(x = trial, y = r, color = method)) + geom_line() + labs(x = "Mate Preference Adjustments", y = "Cor. Between Real and Agent Mate Preferences", title = "Performance of Mate Preference Adjusting Methods" + guides())
 
-ggplot(plotCors, mapping = aes(x = trial, y = r, color = method)) + geom_smooth(method = lm)
 
 # do similar thing for sex differernces. 
 
