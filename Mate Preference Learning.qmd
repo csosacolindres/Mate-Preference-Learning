@@ -442,13 +442,16 @@ Stats
 # cut this to 20 model runs. present that. 
 # maek new data frame == trial cors where o = 1
 
-
 plotCors <- trialCors[trialCors$o==1, ]
+
+plotCors <- plotCors[order(plotCors$method,plotCors$trial),]
 # average performace across all teh model loops.
 plotCors$r <- c(tapply(trialCors$r, list(trialCors$trial, trialCors$method), mean))
 
 # plot 
-ggplot(plotCors, mapping = aes(x = trial, y = r, color = method)) + geom_smooth() + labs(x = "Adjustment Trials", y = expression(italic("r")["Learned, Real Preferences"])) + scale_color_discrete(name = "Adjustment Method", labels = c("Imp-Set", "Random-Set", "All-Imp", "Imp-Imp", "Random-Imp", "All-Prob&Imp", "Random-Random")) + theme_grey(base_size = 13.5)
+ggplot(plotCors, mapping = aes(x = trial, y = r, color = method)) + geom_line() + labs(x = "Adjustment Trials", y = expression(italic("r")["Learned, Real Preferences"])) + scale_color_discrete(name = "Adjustment Method")+ theme_grey(base_size = 13.5)
+#, labels = c("Imp-Set", "Random-Set", "All-Imp", "Imp-Imp", "Random-Imp", "All-Prob&Imp", "Random-Random"))  
+
 
 
 # do similar thing for sex differernces. 
