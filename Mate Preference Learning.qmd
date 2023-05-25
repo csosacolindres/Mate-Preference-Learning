@@ -77,8 +77,8 @@ downProb <- c(rep(NA,6),.8)
 
 
 # Cycles 
-prefLearningCycles <- rep(100,7)
-prefTestingCycles <- rep(maleNum*3,7)
+prefLearningCycles <- rep(150, 7)
+prefTestingCycles <- rep(maleNum*3, 7)
 
 
 #Combine all parameter settings into a matrix for looping
@@ -90,7 +90,7 @@ pMatrix<-data.frame("method"=methodList,
 
 
 #Number of times to repeat each model
-modelLoops<- 30
+modelLoops<- 5
 
 ```
 
@@ -442,12 +442,13 @@ Stats
 # cut this to 20 model runs. present that. 
 # maek new data frame == trial cors where o = 1
 
+
 plotCors <- trialCors[trialCors$o==1, ]
 # average performace across all teh model loops.
 plotCors$r <- c(tapply(trialCors$r, list(trialCors$trial, trialCors$method), mean))
 
-# plot r 
-ggplot(plotCors, mapping = aes(x = trial, y = r, color = method)) + geom_line() + labs(x = "Mate Preference Adjustments", y = "Cor. Between Real and Agent Mate Preferences", title = "Performance of Mate Preference Adjusting Methods" + guides())
+# plot 
+ggplot(plotCors, mapping = aes(x = trial, y = r, color = method)) + geom_smooth() + labs(x = "Adjustment Trials", y = expression(italic("r")["Learned, Real Preferences"])) + scale_color_discrete(name = "Adjustment Method", labels = c("Imp-Set", "Random-Set", "All-Imp", "Imp-Imp", "Random-Imp", "All-Prob&Imp", "Random-Random")) + theme_grey(base_size = 13.5)
 
 
 # do similar thing for sex differernces. 
