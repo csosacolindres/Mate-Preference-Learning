@@ -38,24 +38,30 @@ editor: visual
 
 4.  Cycle back to #2 (change preferences relative to memory by methods---for now only Random) until preferences are no longer changing.
 
+```{r packages}
+
+library(ggplot2)
+library(ggridges)
+library(data.table)
+```
+
+Data
+
+```{r data}
+
+#Load the human data
+data <- read.csv("Human_data.csv")
+data <- data[complete.cases(data[, c(6, 235:249, 345:359, 283:297, 299:213)]),]
+data <- data[data$CIN %in% data$CIN[duplicated(data$CIN)],]
+```
+
+Parameters
+
 ```{r parameters}
 
 # the 15 Traits
-traitNames <- paste0(c("affectionate", 
-                       "ambition", 
-                       "artistic", 
-                       "disposition", 
-                       "family", 
-                       "health", 
-                       "humor", 
-                       "intelligent", 
-                       "kind", 
-                       "parenting", 
-                       "physatt", 
-                       "religious", 
-                       "resources", 
-                       "sexy", 
-                       "status"))
+traitNames <- gsub("ideal_","",colnames(data[,235:249]))
+
 
 # Starting Values for Prefernces and Reward Memory. 
 startPref <- 10
@@ -63,16 +69,20 @@ startRMem <- 0
 
 
 # number of males and females
-maleNum <- 458 
-femaleNum <- 458
+# (optionally set to a lower number for testing)
+maleNum <- as.numeric(table(data$sex)[2])
+femaleNum <- as.numeric(table(data$sex)[1])
+
 
 # All Methods
-methodList <- c("randomMethod", "absoluteMethod", "absImpMethod", "magnitudeMethod", "magImpMethod", "allMagMethod", "magUpDownMethod")
+methodList <- c("randRand", "randConstant", "impConstant", "randImp", "impImp", "allImp", "allImpBi")
 
-# absolute method(s) subtracting amount from mate preferences
-abValue <- c(NA,rep(.1,2),rep(.5,4))
 
-# magnitude method(s) largest change value & probability of abValue going down vs up 
+# Amount of change for constant methods
+changeConstant <- c(NA,rep(.1,2),rep(.5,4))
+
+
+# probability of change going down vs up 
 downProb <- c(rep(NA,6),.8)
 
 
@@ -83,7 +93,7 @@ prefTestingCycles <- rep(maleNum*3, 7)
 
 #Combine all parameter settings into a matrix for looping
 pMatrix<-data.frame("method"=methodList,
-                    "abValue"=abValue,
+                    "changeConstant"=changeConstant,
                     "downProb"=downProb,
                     "prefLearningCycles"=prefLearningCycles,
                     "prefTestingCycles"=prefTestingCycles)
@@ -122,107 +132,123 @@ rcalc <- function(mv, recieved, sent) {
 
 
 
-mpUpdate <- function(method = "method", pref, imp, abValue, downProb) {
+mpUpdate <- function(method = "method", pref, imp, changeConstant, downProb) {
   
-  if(method == "randomMethod") {
+  if(method == "randRand") {
     
-    # Random Method: Selects 1 random trait to change. Changes selected trait to random mate preference value.
+    # Random/Random: Selects 1 random trait to change. Changes selected trait to random mate preference value.
     
-      random <- t(apply(pref, 1, function(y) round(runif(y, min = 0, max = 10), 1)))
+      random <- t(apply(pref, 1, function(y) 
+        round(runif(y, 
+                    min = 0, 
+                    max = 10), 1)))
       colnames(random) <- colnames(pref)
       
-      changeMat <- cbind(1:nrow(pref), sample(1:15, nrow(pref), replace = T))
+      changeMat <- cbind(1:nrow(pref),
+                         sample(1:15, 
+                                nrow(pref), 
+                                replace = T))
+      
       pref[changeMat] <- random[changeMat]
     
     } 
   
   
   
-  if(method == "absoluteMethod") {
+  if(method == "randConstant") {
       
-      # Absolute Method: Selects all trait to change. Changes traits down by abValue amount.
+      # Random/Constant: Selects all trait to change. Changes traits down by changeConstant amount.
     
-      absolute <- pref - abValue 
-      colnames(absolute) <- colnames(pref)
+      new <- pref - changeConstant 
+      colnames(new) <- colnames(pref)
       
-      changeMat <- cbind(1:nrow(pref), sample(1:15, nrow(pref), replace = T))
-      pref[changeMat] <- absolute[changeMat]
+      changeMat <- cbind(1:nrow(pref), 
+                         sample(1:15, 
+                                nrow(pref),
+                                replace = T))
+      
+      pref[changeMat] <- new[changeMat]
     
     }
   
 
   
-  if(method == "absImpMethod") {
+  if(method == "impConstant") {
     
-    # Absolute-Importance Method: Selects a trait to change proportional to how important the traitt is to the specific participant. Changes selected trait down by abValue.  
+    # Imp/Constant: Selects a trait to change proportional to how important the traitt is to the specific participant. Changes selected trait down by changeConstant.  
     
-      absolute <- pref - abValue 
-      colnames(absolute) <- colnames(pref)
+      new <- pref - changeConstant 
+      colnames(new) <- colnames(pref)
       
-      changeVec <- apply(imp, 1, function(x) sample(1:15, 1, prob = 11 - x))
+      changeVec <- apply(imp, 1, function(x) 
+        sample(1:15, 1, prob = 11 - x))
+      
       changeMat <- cbind(1:nrow(pref), changeVec)
-      pref[changeMat] <- absolute[changeMat]
+      
+      pref[changeMat] <- new[changeMat]
     
     }
     
   
   
-  if(method == "allMagMethod"){
+  if(method == "allImp"){
         
-    # All-Magnitude Method: Selects all traits. Changes values down by mag (a value proportional to importance with a max amount that preference value can change). More important traits go down less amount. Less important traits go down less amount.
+    # All/Imp: Selects all traits. Changes values down by mag (a value proportional to importance with a max amount that preference value can change). More important traits go down less amount. Less important traits go down less amount.
     
-    mag <- ((11-imp)/11) * abValue
+    changeConstant <- ((11-imp)/11) * changeConstant
     
-    pref <- pref - mag
+    pref <- pref - changeConstant
   }
   
   
   
-  if(method == "magnitudeMethod") {
+  if(method == "randImp") {
     
         
-    # Magnitude Method: Selects 1 trait at random. Changes values down by mag (a value proportional to importance and a max amount that preference value decreses by). More important traits go down less amount. Less important traits go down less amount.
+    # Random/Imp: Selects 1 trait at random. Changes values down by mag (a value proportional to importance and a max amount that preference value decreses by). More important traits go down less amount. Less important traits go down less amount.
     
-    mag <- ((11-imp)/11) * abValue
-    magnitude <- pref - mag
+    changeConstant <- ((11-imp)/11) * changeConstant
+    new <- pref - changeConstant
     
     changeVec <- apply(imp, 1, function(x) sample(1:15, 1))
     changeMat <- cbind(1:nrow(pref), changeVec)
-    pref[changeMat] <- magnitude[changeMat]
+    pref[changeMat] <- new[changeMat]
   
     }
   
   
   
-  if(method == "magImpMethod") {
+  if(method == "impImp") {
   
-    # Magnitude-Importance Method: Selects 1 trait proportional to how important the trait is (if more important, less likley to be picked. If less important, more likely to be picked). The the preference values decrease by mag (a value proportional to importance and a max amount that preference value decreases by). More important traits decrease less. Less important traits decrease more. 
+    # Imp/Imp: Selects 1 trait proportional to how important the trait is (if more important, less likley to be picked. If less important, more likely to be picked). The the preference values decrease by mag (a value proportional to importance and a max amount that preference value decreases by). More important traits decrease less. Less important traits decrease more. 
     
-    mag <- ((11-imp)/11) * abValue
-    magnitude <- pref - mag
+    changeConstant <- ((11-imp)/11) * changeConstant
+    new <- pref - changeConstant
     
-    changeVec <- apply(imp, 1, function(x) sample(1:15, 1, prob = 11 - x))
+    changeVec <- apply(imp, 1, function(x) 
+      sample(1:15, 1, prob = 11 - x))
+    
     changeMat <- cbind(1:nrow(pref), changeVec)
-    pref[changeMat] <- magnitude[changeMat]
+    pref[changeMat] <- new[changeMat]
     
     }
   
   
   
-  if(method == "magUpDownMethod"){
+  if(method == "allImpBi"){
    
     # Magnitude Up-Down Method: Selects all traits. This can decrease and increase preference values. The traits increase or decrease depending on a weighted proportion (downProb). The preference values decrease by mag (a value proportional to importance and a max amount that preference value decreases by) where ore important traits decrease less. Less important traits decrease more. The preference values increase by mag where the more important traits increase more and the less important traits increase less. 
     
     if(rbinom(1, 1, prob = downProb)){
       
-      mag <- ((11-imp)/11) * abValue
-      pref <- pref - mag
+      changeConstant <- ((11-imp)/11) * changeConstant
+      pref <- pref - changeConstant
       
     } else {
        
-      mag <- ((imp + 1)/11) * abValue
+      changeConstant <- ((imp + 1)/11) * changeConstant
       
-      pref <- pref + mag
+      pref <- pref + changeConstant
       pref[pref > 10] <- 10
        
     }
@@ -239,10 +265,6 @@ mpUpdate <- function(method = "method", pref, imp, abValue, downProb) {
 Agent Generation
 
 ```{r}
-
-data <- read.csv("Human_data.csv")
-data <- data[complete.cases(data[, c(6, 235:249, 345:359, 283:297, 299:213)]),]
-data <- data[data$CIN %in% data$CIN[duplicated(data$CIN)],]
 
 # seperating into sexes
 females <- data[data$sex == 0, c(1,3:4,235:249,283:297,345:359)]
@@ -282,6 +304,7 @@ colnames(prefData)<-c("o",colnames(pMatrix),
 
 #Loop each model m times
 for (o in 1:modelLoops) {
+  
   for (p in 1:nrow(pMatrix)) {
     # re-sets inital traits after a method; if not: old method pref updates will stay for next update method. I dont want that.
     
@@ -314,7 +337,7 @@ for (o in 1:modelLoops) {
           pMatrix$method[p],
           pref = fPref,
           imp = fImp,
-          abValue = pMatrix$abValue[p],
+          changeConstant = pMatrix$changeConstant[p],
           downProb = pMatrix$downProb[p]
         )
         
@@ -322,7 +345,7 @@ for (o in 1:modelLoops) {
           pMatrix$method[p],
           pref = mPref,
           imp = mImp,
-          abValue = pMatrix$abValue[p],
+          changeConstant = pMatrix$changeConstant[p],
           downProb = pMatrix$downProb[p]
         )
       }
@@ -398,24 +421,33 @@ for (o in 1:modelLoops) {
       
       #Compute the average correlation between learned and observed preferences
       
-      r <-
-        suppressWarnings(mean(diag(cor(
-          rbind(fPref, mPref), rbind(females[, 4:18], males[, 4:18])
-        ))))
+      r <- suppressWarnings(mean(diag(cor(rbind(fPref, mPref), 
+                                          rbind(females[, 4:18],
+                                                males[, 4:18])
+                                          ))))
       
       r <- ifelse(is.na(r), 0, r)
       
       # Saves trial by trial correlations for each method being used.
-      trialCors <- rbind(trialCors, cbind(o, pMatrix[p, ], "trial" = l, r))
+      trialCors <- rbind(trialCors,
+                         cbind(o, 
+                               pMatrix[p, ],
+                               "trial" = l,
+                               r))
       
     }
     
     
     #Prepare learned preferences for saving
-    fPref <-
-      suppressWarnings(cbind(o, pMatrix[p, ], females[, 1:33], fPref))
-    mPref <-
-      suppressWarnings(cbind(o, pMatrix[p, ], males[, 1:33], mPref))
+    fPref <- suppressWarnings(cbind(o, 
+                             pMatrix[p, ],
+                             females[, 1:33], 
+                             fPref))
+    
+    mPref <- suppressWarnings(cbind(o, 
+                                    pMatrix[p, ], 
+                                    males[, 1:33], 
+                                    mPref))
     
     colnames(fPref) <- colnames(prefData)
     colnames(mPref) <- colnames(prefData)
@@ -430,8 +462,14 @@ for (o in 1:modelLoops) {
 trialCors<-trialCors[-1,]
 prefData<-prefData[-1,]
 
-write.csv(trialCors, file = paste0("TrialCorrelationResults", Sys.time(), " .csv"))
-write.csv(prefData, file = paste0("PrefDataResults", Sys.time(), " .csv"))
+write.csv(trialCors, 
+          file = paste0("TrialCorrelationResults", 
+                        format(Sys.time(),"%Y%m%d %H%M%S"),".csv"),
+          row.names=F)
+write.csv(prefData, 
+          file = paste0("PrefDataResults", 
+                        format(Sys.time(),"%Y%m%d %H%M%S"), " .csv"),
+          row.names=F)
 
 ```
 
@@ -439,21 +477,76 @@ Stats
 
 ```{r}
 
-# cut this to 20 model runs. present that. 
-# maek new data frame == trial cors where o = 1
-
+#Make a new dataframe to store average correlations across runs
 plotCors <- trialCors[trialCors$o==1, ]
 
+#Rearrange to fit the order output by the upcoming tapply()
 plotCors <- plotCors[order(plotCors$method,plotCors$trial),]
-# average performace across all teh model loops.
-plotCors$r <- c(tapply(trialCors$r, list(trialCors$trial, trialCors$method), mean))
+
+#Compute average performance across all model loops.
+plotCors$r <- c(tapply(trialCors$r,
+                       list(trialCors$trial,
+                            trialCors$method),
+                       mean))
 
 # plot 
-ggplot(plotCors, mapping = aes(x = trial, y = r, color = method)) + geom_line() + labs(x = "Adjustment Trials", y = expression(italic("r")["Learned, Real Preferences"])) + scale_color_discrete(name = "Adjustment Method")+ theme_grey(base_size = 13.5)
-#, labels = c("Imp-Set", "Random-Set", "All-Imp", "Imp-Imp", "Random-Imp", "All-Prob&Imp", "Random-Random"))  
+corPlot<-ggplot(plotCors, mapping = aes(x = trial, y = r, color = method))+
+  geom_line() +
+  labs(x = "Adjustment Trials",
+       y = expression(italic("r")["Learned, Real Preferences"])) +
+  scale_color_discrete(name = "Adjustment Method") +
+  theme_grey(base_size = 13.5)
+#, labels = c("Imp-Constant", "Random-Constant", "All-Imp", "Imp-Imp", "Random-Imp", "All-Prob&Imp", "Random-Random"))  
 
 
 
-# do similar thing for sex differernces. 
+#Do the same thing for sex differences
 
+#Create a new dataframe for storing average learned preferences across runs
+prefAvs<-prefData[prefData$o==1,]
+prefAvs<-prefAvs[order(prefAvs$method,prefAvs$PIN),]
+
+
+#Compute the average learned preferences across model runs
+prefMeans<-sapply(colnames(prefAvs[40:53]),function(x)
+  c(tapply(prefData[,colnames(prefData)==x],
+           list(prefData$PIN,prefData$method),
+           mean))
+  )
+
+#Save these to the datarame
+prefAvs[,40:53]<-prefMeans
+
+#Compare sex differences in attractiveness, resources, and kindness
+tPhysatt <- t.test(learned_physatt ~ sex,
+                   data = prefAvs[prefAvs$method == "allImp", ])
+
+tRes <- t.test(learned_resources ~ sex,
+               data = prefAvs[prefAvs$method == "allImp", ])
+
+tKind <- t.test(learned_kind ~ sex,
+                data = prefAvs[prefAvs$method == "allImp", ])
+
+
+
+#Melt average preference data for plotting
+prefMelt<-melt(as.data.table(prefAvs[prefAvs$method=="allImp",]),
+               id.vars=1:9,
+               measure.vars=c(40:53))
+
+#Convert sex to a factor
+prefMelt$sex<-factor(prefMelt$sex,labels=c("Female","Male"))
+
+#Plot density plots of preferences
+prefPlot <- ggplot(prefMelt,
+                   aes(y = variable,
+                       x = value,
+                       fill = sex)) +
+  geom_density_ridges(alpha=.5) +
+  labs(x = "Learned Preference", y = "Trait") +
+  scale_fill_discrete(name = "Participant Sex") +
+  theme_grey(base_size = 25) +
+  scale_y_discrete(labels = tools::toTitleCase(gsub(
+    "learned_", "", unique(prefMelt$variable)
+  )))
 ```
